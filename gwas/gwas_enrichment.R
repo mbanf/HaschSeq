@@ -66,9 +66,8 @@ gwas_enrichment <- function(l.bQTL_gene_partitioning, v.traits, output_file, s.d
     l.bQTL_gene_partitioning_with_gwas[[s]] <- df.bQTL_gene_partitioning_with_gwas
   }
   
-  saveRDS(l.bQTL_gene_partitioning_with_gwas, "tmp/l.bQTL_gene_partitioning_with_gwas.rds")
-  saveRDS(l.number_per_trait, "tmp/l.number_per_trait.rds")
-  
+  saveRDS(l.bQTL_gene_partitioning_with_gwas, "../tmp/l.bQTL_gene_partitioning_with_gwas.rds")
+  saveRDS(l.number_per_trait, "../tmp/l.number_per_trait.rds")
   
   v.distribution <- apply(l.bQTL_gene_partitioning[[1]][,v.partitions], 2, table)["yes",]
   n.sampleSize <- sum(v.distribution) - v.distribution["gene"]
