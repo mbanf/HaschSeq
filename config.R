@@ -41,9 +41,11 @@ b.loadGenePartitioning <- FALSE
 motifs = c("CGTGCG", "CGCACG", 
            "GTACGG", "CCGTAC",
            "GCCGCC","CGGCGG",
-           "CGTGTG","CACACG")
-names(motifs) = c("BRRE", "BRRE", "SBP","SBP","OTHER", "OTHER","GBOX", "GBOX")
-v.motif_offset = c(5,5,5,5,6,6,5,5,5,5)
+           "CGTGTG","CACACG", "CACGTG")
+names(motifs) = c("BRRE1", "BRRE1_RC", "SBP","SBP","OTHER", "OTHER","BRRE2","BRRE2_RC", "GBOX")
+v.motif_offset = c(5,5,5,5,5,5,5,5,5)
+
+#"BRRE1", "BRRE1_RC", "BRRE2","BRRE2_RC", "GBOX" => nur diese sind targets (fuer ASB explanation), others are controls
 
 motifs = toupper(motifs)
 

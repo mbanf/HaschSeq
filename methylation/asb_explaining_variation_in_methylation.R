@@ -131,7 +131,7 @@ asb_explaining_variation_in_methylation = function(l.SNPs=l.SNPs, th.bp_offset =
   
   # saveRDS(l.SNPs_w_chromatin, "l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds")
   
-  l.SNPs_w_chromatin = readRDS("l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds")
+  l.SNPs_w_chromatin = readRDS("../tmp/l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds")
   
   l.diff_data = vector(mode = "list", length = 3)
   l.diff_data[[1]] = l.SNPs_w_chromatin[[1]][[3]] - l.SNPs_w_chromatin[[1]][[2]]
@@ -199,8 +199,8 @@ asb_explaining_variation_in_methylation = function(l.SNPs=l.SNPs, th.bp_offset =
   
   
   # saveRDS(l.results, "l.results.rds")
-  l.ASB_SNPs_w_chromatin = readRDS("l.SNPs_w_chromatin_ASBs.rds")
-  l.bgSNPs_w_chromatin = readRDS("l.bgSNPs_w_chromatin.rds")
+  l.ASB_SNPs_w_chromatin = readRDS("../tmp/l.SNPs_w_chromatin_ASBs.rds")
+  l.bgSNPs_w_chromatin = readRDS("../tmp/l.bgSNPs_w_chromatin.rds")
   
   diff_ASB_MO17_minus_B73 = l.ASB_SNPs_w_chromatin[[3]]$MO17_CpG - l.ASB_SNPs_w_chromatin[[2]]$B73_CpG
   diff_bgSNPs_MO17_minus_B73 = l.bgSNPs_w_chromatin[[3]]$MO17_CpG - l.bgSNPs_w_chromatin[[2]]$B73_CpG

@@ -1,46 +1,83 @@
-predefined_motif_analysis <- function(l.bQTL_gene_partitioning, df.peaks,motifs){
+
+df.ASBs = l.bQTL_gene_partitioning[[1]]
+motifs.BRRE = motifs[c(1,2,7,8,9)]
+motifs = motifs.BRRE
+
+asbs_explaining_motifs <- function(df.ASBs, motifs, genome, l.genome.mutant){
   
   message("Performing predefined motif analysis...")
   
-  l.motif_analysis <- vector(mode = "list", length = 2)
-  l.nucleotideInPeaks <- vector(mode = "list", length = 2)
+  # allow for double motifs in ASBs
+  postTotal.significant <- df.ASBs
   
-  for(s in 1:2){ # significant and non-significant
+  strt<-Sys.time() 
+  
+  df.motif_analysis <- postTotal.significant[-(1:nrow(postTotal.significant)),]
+  df.motif_analysis["motif.ref"] <- c()
+  df.motif_analysis["motif.mutant"] <- c()
+
+  # most basic way to estimate the numbers => no dataset generation 
+  n.asbs_explained = 0
+  
+  for(i in 1:n.chromosomes){
+  
+    print(paste("processing chromosome ", i))
     
-    # work only on asb partitioning data (remove duplicates)
-    postTotal.significant <- l.bQTL_gene_partitioning[[s]]
+    genome.reference <- DNAString(genome[[i]])
+    genome.mutant    <- l.genome.mutant[[i]]
     
-    strt<-Sys.time() 
-    cl<-makeCluster(min(n.chromosomes, n.cpus))
-    registerDoParallel(cl)
+    postTotal.significant.i <- subset(postTotal.significant, postTotal.significant$contig == i) 
     
-    l.sets <-  foreach(i = 1:n.chromosomes, .packages=c("seqinr", "VariantAnnotation", "Biostrings")) %dopar% { 
+    for(k in 1:nrow(postTotal.significant.i)){
+    
+      pos = postTotal.significant.i$position[k]
+      seq.reference = subseq(genome.reference,pos - offset, pos + offset)
+      seq.mutant    = subseq(genome.mutant,pos - offset, pos + offset)
       
-      df.nucleotideInPeaks <- data.frame(A = numeric(), G = numeric(), C = numeric(), T = numeric(), motif = character())
+      for(m in 1:length(motifs)){
+
+        offset = v.motif_offset[m]
+        motif = motifs[m]
+      
+        n.reference = length(start(matchPattern(motifs[m], seq.reference, fixed = TRUE)))
+        n.mutant = length(start(matchPattern(motifs[m], seq.mutant, fixed = TRUE)))
+        
+        n.total = n.reference + n.mutant
+        
+        if(n.total > 0){
+          n.asbs_explained = n.asbs_explained + 1
+        }
+          
+      }
+      
+    }
+  }
+        
+        #v.reference <- as.numeric(start(matchPattern(motifs[m], seq.reference, fixed = TRUE)))
+        #v.mutant <- as.numeric(start(matchPattern(motifs[m], seq.mutant, fixed = TRUE)))
+        
+        
+      }
+      
+      
+      
+      
+      
       
       df.motif_analysis <- postTotal.significant[-(1:nrow(postTotal.significant)),]
+      
       df.motif_analysis["motif.ref"] <- c()
       df.motif_analysis["motif.mutant"] <- c()
       df.motif_analysis["unique"] <- c()
       df.motif_analysis["isMotifInPeak"] <- c()
       df.motif_analysis["pos.motif"] <- c()
       
-      print(paste("processing chromosome ", i))
       
-      genome.reference <- DNAString(genome[[i]])
-      genome.mutant    <- l.genome.mutant[[i]]
-      
-      # binding peaks 
-      tf_target_bind.sset <- subset(df.peaks, df.peaks$seqnames == i)
-      
-      # bQTL
-      postTotal.significant.i <- subset(postTotal.significant, postTotal.significant$contig == i) 
       
       for(m in 1:length(motifs)){
         
-        print(paste("processing motif ", m))
         
-        s.motif_offset = v.motif_offset[m]
+        
         
         # returns the starting position of the found motif
         v.reference <- as.numeric(start(matchPattern(motifs[m], genome.reference, fixed = TRUE)))
@@ -170,21 +207,21 @@ predefined_motif_analysis <- function(l.bQTL_gene_partitioning, df.peaks,motifs)
       l.sets
     }
     
-    stopCluster(cl)
-    print(Sys.time()-strt)
-    
-    df.nucleotideInPeaks <- c()
-    df.motif_analysis <- c()
-    
-    for(i in 1:n.chromosomes){
-      df.nucleotideInPeaks <- rbind(df.nucleotideInPeaks, l.sets[[i]][[1]])
-      df.motif_analysis <- rbind(df.motif_analysis, l.sets[[i]][[2]])
-    }
-    
-    l.motif_analysis[[s]] <- df.motif_analysis
-    l.nucleotideInPeaks[[s]] <- df.nucleotideInPeaks
-    
   }
+  print(Sys.time()-strt)
+  
+  df.nucleotideInPeaks <- c()
+  df.motif_analysis <- c()
+  
+  for(i in 1:n.chromosomes){
+    df.nucleotideInPeaks <- rbind(df.nucleotideInPeaks, l.sets[[i]][[1]])
+    df.motif_analysis <- rbind(df.motif_analysis, l.sets[[i]][[2]])
+  }
+  
+  l.motif_analysis[[s]] <- df.motif_analysis
+  l.nucleotideInPeaks[[s]] <- df.nucleotideInPeaks
+  
+  
   
   saveRDS(l.motif_analysis, paste("tmp/l.motif_analysis.rds", sep = ""))
   saveRDS(l.nucleotideInPeaks, paste("tmp/l.nucleotideInPeaks.rds", sep = ""))

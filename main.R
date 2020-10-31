@@ -2,7 +2,7 @@ rm(list=ls()) # clear workspace
 
 source("config.R")
 
-source("utils/general.R")
+source("utils.R")
 install_and_load_libraries()
 
 # define input datasets 
@@ -14,7 +14,7 @@ if(b.firstRun){
   source("utils/mutant_genome.R")
 }else{
   df.snp_positions <- read.table(paste("data/df.snp_positions.csv", sep = ""),  sep ="\t")
-  l.genome.mutant <- readRDS("tmp/genome_mutant.rds")
+  l.genome.mutant <- readRDS("../tmp/genome_mutant.rds")
 }
 
 

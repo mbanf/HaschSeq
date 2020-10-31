@@ -26,14 +26,13 @@ install_and_load_libraries <- function(){
   
   if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-  BiocManager::install(version = "3.11")
+  BiocManager::install()
   
-  #list.of.packages <- c("Biostrings", "VariantAnnotation","BSgenome")
+  list.of.packages <- c("Biostrings", "VariantAnnotation","BSgenome")
   #new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
   #if(length(new.packages)) biocLite(new.packages)
   
   BiocManager::install(list.of.packages)
-  
   
   require(seqinr)
   require(Biostrings)
