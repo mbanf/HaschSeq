@@ -1,14 +1,36 @@
 
-df.ASBs = l.bQTL_gene_partitioning[[1]]
-motifs.BRRE = motifs[c(1,2,7,8,9)]
-motifs = motifs.BRRE
+df.ASBs_methylation <- readRDS("df.ASBs_methylation.rds")
 
-asbs_explaining_motifs <- function(df.ASBs, motifs, genome, l.genome.mutant){
+df.ASBs = l.bQTL_gene_partitioning[[1]]
+df.bpSNPs = l.bQTL_gene_partitioning[[2]]
+
+
+# TODO: get a background selection on the motif by chance occurrence ... 
+asbs_explaining_motifs <- function(df.ASBs, genome, l.genome.mutant, offset = 5, core_motif = "CGTG", n.cpus = 2){
   
+  brre.fw = c("CGTGCG", "CGTGTG", # original motifs
+              "CGTGAG", "CGTGGG", 
+              "CGTGCA", "CGTGCC", "CGTGCT", 
+              "CGTGTA", "CGTGTC", "CGTGTT")
+  
+  brre.bw = c("CGCACG","CACACG", # original motifs
+              "CCCACG", "CTCACG",
+              "AGCACG", "GGCACG", "TGCACG", 
+              "AACACG", "GACACG", "TACACG")
+  
+  ebox.combinations = c("CACGTG") 
+  
+  # ebox.combinations = c("CAAATG", "CAACTG", "CAAGTG", "CAATTG",
+  #                       "CACATG", "CACCTG", "CACGTG", "CACTTG",
+  #                       "CAGATG", "CAGCTG", "CAGGTG", "CAGTTG",
+  #                       "CATATG", "CATCTG", "CATGTG", "CATTTG")
+
+  motifs = unique(c(brre.fw, brre.bw, ebox.combinations))
+                        
   message("Performing predefined motif analysis...")
   
   # allow for double motifs in ASBs
-  postTotal.significant <- df.ASBs
+  postTotal.significant <- df.ASBs #  df.bpSNPs #df.ASBs # df.bpSNPs #  df.ASBs # df.bpSNPs #  df.ASBs
   
   strt<-Sys.time() 
   
@@ -17,53 +39,69 @@ asbs_explaining_motifs <- function(df.ASBs, motifs, genome, l.genome.mutant){
   df.motif_analysis["motif.mutant"] <- c()
 
   # most basic way to estimate the numbers => no dataset generation 
-  n.asbs_explained = 0
   
-  for(i in 1:n.chromosomes){
   
-    print(paste("processing chromosome ", i))
-    
-    genome.reference <- DNAString(genome[[i]])
-    genome.mutant    <- l.genome.mutant[[i]]
-    
-    postTotal.significant.i <- subset(postTotal.significant, postTotal.significant$contig == i) 
-    
-    for(k in 1:nrow(postTotal.significant.i)){
-    
-      pos = postTotal.significant.i$position[k]
-      seq.reference = subseq(genome.reference,pos - offset, pos + offset)
-      seq.mutant    = subseq(genome.mutant,pos - offset, pos + offset)
-      
-      for(m in 1:length(motifs)){
+  strt <- Sys.time()
+  cl <- makeCluster(n.cpus)
+  registerDoParallel(cl)
+  
+  l.SNPs.motifs <- foreach(i = 1:n.chromosomes, .packages=c("seqinr", "VariantAnnotation", "Biostrings")) %dopar% {
 
-        offset = v.motif_offset[m]
-        motif = motifs[m]
+      print(paste("processing chromosome ", i))
       
-        n.reference = length(start(matchPattern(motifs[m], seq.reference, fixed = TRUE)))
-        n.mutant = length(start(matchPattern(motifs[m], seq.mutant, fixed = TRUE)))
+      genome.reference <- DNAString(genome[[i]])
+      genome.mutant    <- l.genome.mutant[[i]]
+      
+      postTotal.significant.i <- subset(postTotal.significant, postTotal.significant$contig == i) 
+      postTotal.significant.i["has_motif"] = FALSE
+      pb <- txtProgressBar(min = 0, max = nrow(postTotal.significant.i), style = 3)
+      for(k in 1:nrow(postTotal.significant.i)){
+        setTxtProgressBar(pb, k)
+      
+        pos = postTotal.significant.i$position[k]
+        offset = 5
+        seq.reference = subseq(genome.reference, pos - offset, pos + offset)
+        seq.mutant    = subseq(genome.mutant, pos - offset, pos + offset)
         
-        n.total = n.reference + n.mutant
-        
-        if(n.total > 0){
-          n.asbs_explained = n.asbs_explained + 1
+        # perfect hits
+        n.total = 0
+        for(m in 1:length(motifs)){ # DNAStringSet(matches) => check if these have the core motif
+          n.reference = length(start(matchPattern(motifs[m], seq.reference, fixed = TRUE, max.mismatch = 0)))
+          n.mutant = length(start(matchPattern(motifs[m], seq.mutant, fixed = TRUE, max.mismatch = 0)))
+          n.total = n.total + n.reference + n.mutant
         }
-          
+
+        if(n.total > 0){
+          postTotal.significant.i[k, "has_motif"] <- TRUE
+        }
+        
       }
-      
-    }
+      close(pb)
+    postTotal.significant.i
   }
-        
-        #v.reference <- as.numeric(start(matchPattern(motifs[m], seq.reference, fixed = TRUE)))
-        #v.mutant <- as.numeric(start(matchPattern(motifs[m], seq.mutant, fixed = TRUE)))
-        
-        
-      }
+  stopCluster(cl)
+  print(Sys.time() - strt)  
+      
+    
+  df.ASBs_w_motifs <- c()
+  for(i in 1:n.chromosomes){
+    df.ASBs_w_motifs <- rbind(df.ASBs_w_motifs, l.SNPs.motifs[[i]])
+  }
+  
+  df.ASBs_methylation[,"has_motif"] <- df.ASBs_w_motifs$has_motif
+  df.ASBs_methylation[,"overlap"] <- apply(df.ASBs_methylation[,c("is_methylated", "has_motif")], 1, all)
+  
+  
+  table(df.ASBs_methylation$overlap)
+  
+  test <- subset(df.ASBs_w_motifs, df.ASBs_w_motifs$POSTfreq >= 0.85 | df.ASBs_w_motifs$POSTfreq <= 0.15)
+  table(df.ASBs_w_motifs$has_motif)
+      table(test$has_motif)
       
       
       
       
-      
-      
+    
       df.motif_analysis <- postTotal.significant[-(1:nrow(postTotal.significant)),]
       
       df.motif_analysis["motif.ref"] <- c()
