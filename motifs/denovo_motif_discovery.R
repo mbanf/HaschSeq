@@ -1,26 +1,19 @@
 
-denovo_motif_discovery <- function(postTotal.significant = l.selection[[1]], th.seq = 5){
+denovo_motif_discovery <- function(postTotal.significant = l.selection[[1]], df.peaks, genome, l.genome.mutant, th.seq = 5){
+
+  # For local motif enrichment analysis (Fig. 2E), we extracted +/- 50 bp of the high affinity
+  # BZR1 bound allele surrounding ASBs. The MEME CentriMo suite (v. 5.2.0) was used to
+  # determine the local distribution along the 101 bp fragments for the canonical BZR1 motifs
+  # BRRE (CGTG[T/C]G, C[G/A]CACG) or G-box (CACGTG) and a control motif, with SBP
+  # ("GTACGG", "CCGTAC")14, with a similar GC content
   
-  #postTotal.significant <- l.postTotal[[1]]http://heliumfloats.com/helium_logo.png
-  
-  # postTotal.significant <- l.selection[[1]]
+  # for external extraction 
   
   strt<-Sys.time() 
   cl<-makeCluster(n.cpus)
   registerDoParallel(cl)
   
   l.sequences <- foreach(i = 1:n.chromosomes, .packages=c("seqinr", "VariantAnnotation", "Biostrings")) %dopar% {   
-    
-    #   df.nucleotideInPeaks <- data.frame(A = numeric(), G = numeric(), C = numeric(), T = numeric(), motif = character())
-    #   
-    #   df.motif_analysis <- postTotal.significant[-(1:nrow(postTotal.significant)),]
-    #   df.motif_analysis["motif.ref"] <- c()
-    #   df.motif_analysis["motif.mutant"] <- c()
-    #   df.motif_analysis["unique"] <- c()
-    #   df.motif_analysis["isInPeak"] <- c()
-    #   df.motif_analysis["pos.motif"] <- c()
-    
-    # for(i in 1:10){
     
     print(paste("processing chromosome ", i))
     
@@ -76,6 +69,7 @@ denovo_motif_discovery <- function(postTotal.significant = l.selection[[1]], th.
   stopCluster(cl)
   print(Sys.time()-strt)
   
+  # store for external analysis
   
 }
 

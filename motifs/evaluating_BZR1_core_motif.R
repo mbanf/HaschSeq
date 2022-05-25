@@ -1,12 +1,10 @@
 
 
-evaluating_BZR1_core_motif <- function(df.ASBs, core_motif = "CGTG"){
+evaluating_BZR1_core_motif <- function(df.ASBs, core_motif = "CGTG", s.motif_offset = 5, n.chromosomes = 10){
   
-  core_motif = "CGTG"
-  s.motif_offset = 5
+  
   
   df.ASBs.core_motifs = c()
-  
   
   for(i in 1:n.chromosomes){
     
@@ -16,7 +14,6 @@ evaluating_BZR1_core_motif <- function(df.ASBs, core_motif = "CGTG"){
     df.ASBs.i["MO17_sequence"] = ""
     df.ASBs.i["B73_pos_core_motif"] = NA
     df.ASBs.i["MO17_pos_core_motif"] = NA
-    
     
     print(paste("processing chromosome ", i))
     
@@ -44,22 +41,12 @@ evaluating_BZR1_core_motif <- function(df.ASBs, core_motif = "CGTG"){
         res = res - s.motif_offset - 1
         df.ASBs.i$MO17_pos_core_motif[j] = paste(res, collapse = ",")
       }
-      
-      
+    
     }
-    
     df.ASBs.core_motifs = rbind(df.ASBs.tmp, df.ASBs.i)
-    
   }
   
-  
-  write.table(df.ASBs.core_motifs, paste(folder_output, "/SX3.txt", sep = ""), quote = FALSE, row.names = FALSE, sep ="\t")
-  # write.csv2(df.ASBs.tmp, "A:/junkDNA.ai/df.ASBs.csv",row.names = F)
-  
-  
-  ## NAS
-  
-  
+  saveRDS(df.ASBs.core_motifs, paste(folder_tmp, "df.ASBs.core_motifs.rds", sep = "/"))
 }
 
 

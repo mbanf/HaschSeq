@@ -1,4 +1,5 @@
-motif_snp_position_significance <- function(){
+motif_snp_position_significance <- function(l.bQTL_gene_partitioning, motifs, v.motif_offset, df.peaks,
+                                            genome, l.genome.mutant, n.chromosomes){
   
   df.motifPositionAnalysis <- c() 
   
@@ -157,18 +158,14 @@ motif_snp_position_significance <- function(){
             }
           }
         }
-        
       }
       
       postTotal.combined <- rbind(postTotal.combined, postTotal.chromosome.expanded)
-      
     }
     
     df.motifPositionAnalysis <- rbind(df.motifPositionAnalysis, postTotal.combined)
-    
   }
   
-  write.table(df.motifPositionAnalysis, paste(folder_output, "/motifs/S0_5.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-  
+  saveRDS(df.motifPositionAnalysis, paste(folder_tmp, "df.motifPositionAnalysis.rds", sep = "/"))
   
 }

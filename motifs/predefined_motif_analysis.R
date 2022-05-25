@@ -1,6 +1,13 @@
-predefined_motif_analysis <- function(l.bQTL_gene_partitioning, df.peaks,motifs){
+predefined_motif_analysis <- function(l.bQTL_gene_partitioning, df.peaks, motifs, v.motif_offset){
   
-  message("Performing predefined motif analysis...")
+  # To identify ASBs which may be explained by motif variation (Fig. 2h), we extracted the
+  # +/- 5 bp of the high affinity BZR1 bound allele surrounding ASBs. Using R we scanned
+  # those 11 bp fragments for canonical BRRE (CGTG[T/C]G, C[G/A]CACG), allowing a
+  # single base pair mismatch outside the core motif (CGTG), or G-box (CACGTG) motifs
+  # and determined ASBs where the SNP changed a BRRE or G-box motif into an altered
+  # (non BRRE or G-box) motif. 
+  
+  message("Extracting +/- 5 bp of the high affinity BZR1 bound allele surrounding ASBs and scanning for canonical BRRE (CGTG[T/C]G, C[G/A]CACG), \n allowing a single base pair mismatch outside the core motif (CGTG), or G-box (CACGTG) motifs")
   
   l.motif_analysis <- vector(mode = "list", length = 2)
   l.nucleotideInPeaks <- vector(mode = "list", length = 2)
@@ -49,18 +56,12 @@ predefined_motif_analysis <- function(l.bQTL_gene_partitioning, df.peaks,motifs)
         vec.intersect <- intersect(v.reference, v.mutant)
         vec.reference.unique <- v.reference[!v.reference %in% v.mutant] # B73
         vec.mutant.unique <- v.mutant[!v.mutant %in% v.reference] # MO17
-        
-        #postTotal.significant.i[which(postTotal.significant.i$position %in% vec.mutant.unique),
-        
+
         ## analyze peak based surroundings to 
         for(j in 1:length(vec.intersect)){
-          
-          #cat("Processing... ", round(j/length(vec.intersect) * 100, digits = 2) , "%", "\r"); flush.console()  
-          
+
           # is the motif (not just the ASB) in peak
           idx.j <- which(tf_target_bind.sset$start <= vec.intersect[j] & tf_target_bind.sset$end >= vec.intersect[j] + s.motif_offset) # found a mutual motif in the peak -> take this peak
-          
-          #idx.j <- which(postTotal.significant.i$position >= vec.intersect[j] & postTotal.significant.i$position <= vec.intersect[j] + 5) # 
           
           if(length(idx.j) > 0){
             
@@ -186,10 +187,8 @@ predefined_motif_analysis <- function(l.bQTL_gene_partitioning, df.peaks,motifs)
     
   }
   
-  saveRDS(l.motif_analysis, paste("tmp/l.motif_analysis.rds", sep = ""))
-  saveRDS(l.nucleotideInPeaks, paste("tmp/l.nucleotideInPeaks.rds", sep = ""))
-  
-  write.table(l.motif_analysis[[1]], paste(folder_output, "/motifs/S0_1.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
+  saveRDS(l.motif_analysis, paste(folder_tmp, "l.motif_analysis.rds", sep = "/"))
+  saveRDS(l.nucleotideInPeaks, paste(folder_tmp, "l.nucleotideInPeaks.rds", sep = "/"))
   
   message("...finished")
   

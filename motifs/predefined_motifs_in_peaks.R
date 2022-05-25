@@ -1,9 +1,7 @@
-predefined_motifs_in_peaks = function(){
+predefined_motifs_in_peaks = function(l.motif_analysis, l.nucleotideInPeaks,  v.sets = c(5,10,15,20, 25), th.readcount = 5){
   
   message("Performing predefined motif and peak analysis...")
   
-  #df.motif_analysis.significant <- df.motif_analysis
-  #df.nucleotideInPeaks.significant <- df.nucleotideInPeaks
   l.motif_analysis.postprocessed <- vector(mode = "list", length = 2)
   
   for(s in 1:2){
@@ -11,31 +9,24 @@ predefined_motifs_in_peaks = function(){
     df.motif_analysis <- l.motif_analysis[[s]]
     df.nucleotideInPeaks <- l.nucleotideInPeaks[[s]]
     
-    # nucleotide environments 
-    v.sets <- c(5,10,15,20, 25)
-    
     for(k in 1:length(v.sets)){
       for(m in 1:length(motifs)){
-        #print( motifs[m])  
         
         df.nucleotideInPeaks.m <- subset(df.nucleotideInPeaks, df.nucleotideInPeaks$motif ==  motifs[m])[,1:4]
         df.nucleotideInPeaks.m[df.nucleotideInPeaks.m > v.sets[k]] <- 0
-        
         df.nucleotideInPeaks.m <- df.nucleotideInPeaks.m[which(rowSums(df.nucleotideInPeaks.m) > 0),]
         
-        #print(colSums(df.nucleotideInPeaks.m) / sum(df.nucleotideInPeaks.m))
         if(nrow(df.nucleotideInPeaks.m) > 0)
           res <- colSums(df.nucleotideInPeaks.m) / sum(df.nucleotideInPeaks.m)
-        #print(res[2] + res[3])
+  
       }
     }  
     
     df.motif_analysis.postprocessed <- subset(df.motif_analysis, !(df.motif_analysis$motif.ref %in% motifs & df.motif_analysis$motif.mutant %in% motifs))
     
     if(s == 1)
-      df.motif_analysis.postprocessed <- subset(df.motif_analysis.postprocessed, df.motif_analysis.postprocessed$altCount >= 5 & df.motif_analysis.postprocessed$refCount >= 5)
-    
-    if(s == 2)
+      df.motif_analysis.postprocessed <- subset(df.motif_analysis.postprocessed, df.motif_analysis.postprocessed$altCount >= th.readcount & df.motif_analysis.postprocessed$refCount >= th.readcount)
+    else if(s == 2)
       df.motif_analysis.postprocessed["POSTfreq"] = 0.5
     
     v.sets <- c("reference", "mutant")
@@ -97,4 +88,7 @@ predefined_motifs_in_peaks = function(){
     
     l.motif_analysis.postprocessed[[s]] <- df.motif_analysis.postprocessed
   }
+  
+  saveRDS(l.motif_analysis.postprocessed, paste(folder_tmp, "l.motif_analysis.postprocessed.rds", sep = "/"))
+  
 }

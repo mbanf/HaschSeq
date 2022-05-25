@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+data/
+tmp/
+tmp_test/
+output/
+output_test
+manuscript/
+figures/

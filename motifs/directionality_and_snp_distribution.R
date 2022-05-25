@@ -1,44 +1,23 @@
-directionality_and_snp_distribution(){
+directionality_and_snp_distribution <- function(l.motif_analysis.postprocessed){
   
   message("figure 2 - directionality of ASB")
-  
-  l.motif_analysis.postprocessed = readRDS(paste("tmp/l.motif_analysis.postprocessed.rds", sep = ""))
-  
-  print(table(l.motif_analysis.postprocessed[[1]]$direction))
-  write.table(l.motif_analysis.postprocessed[[1]], paste(folder_output, "/motifs/S0_2.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-  
-  # write.csv(l.motif_analysis[[1]], "/Shared/Everyone/Michael_Thomas/ASEReadCounter/C1_C22_YFP.csv")
-  #write.csv(l.motif_analysis.postprocessed[[1]], "/Shared/Everyone/Michael_Thomas/ASEReadCounter/l.motif_analysis.postprocessed_significant_1130.csv")
-  #write.csv(l.motif_analysis.postprocessed[[2]], "/Shared/Everyone/Michael_Thomas/ASEReadCounter/l.motif_analysis.postprocessed_nonsignificant_1130.csv")
-  
-  
-  message("figure 2 - motif analysis")
-  
-  # dataframe 
+
   
   df.motif_directionality <- data.frame(motif = motifs,  yes = numeric(length(motifs)),  no = numeric(length(motifs)))
   
   for(m in 1:length(motifs)){
-    
     test <- l.motif_analysis.postprocessed[[1]] 
     tmp <- subset(test, test$motif.mutant ==  motifs[m] & test$unique == "mutant")
     tmp <- rbind(tmp, subset(test, test$motif.ref ==  motifs[m] & test$unique == "reference"))
-    # print(table(tmp$direction))
     
     df.motif_directionality$yes[m] <- table(tmp$direction)["yes"]
     df.motif_directionality$no[m] <- table(tmp$direction)["no"]
-    
   }
   
-  
-  
-  write.table(df.motif_directionality, paste(folder_output, "/motifs/S0_3.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-  
+  saveRDS(df.motif_directionality, paste(folder_tmp, "df.motif_directionality.rds", sep = "/"))
   
   
   message("figure 2 - motif analysis - snp distribution")
-  
-  # todo: Data
   
   df.motif_nucleotidePositionPartitions <- data.frame(motif = character(),
                                                       type = character(),
@@ -69,21 +48,15 @@ directionality_and_snp_distribution(){
   peak <- c("yes", "no")
   
   for(s in 1:2){
-    
     for(p in 1:2){
-      
-      # print(paste(set_sign[s], ", " , set_peak[p]))
-      
+
       df.motif_analysis.postprocessed <- l.motif_analysis.postprocessed[[s]]
       df.motif_analysis.postprocessed <- subset(df.motif_analysis.postprocessed, df.motif_analysis.postprocessed$isMotifInPeak == peak[p])
       
       for(l in 1:length(motifs)){
         
         test.l <- subset(df.motif_analysis.postprocessed, df.motif_analysis.postprocessed$motif.ref == motifs[l] | df.motif_analysis.postprocessed$motif.mutant == motifs[l])
-        
         snp.pos <- (test.l$position - test.l$pos.motif) + 1
-        
-        
         
         # directionality test 
         if(FALSE){
@@ -127,9 +100,6 @@ directionality_and_snp_distribution(){
   
   message("...finished")
   
-  
-  write.table(df.motif_nucleotidePositionPartitions, paste(folder_output, "/motifs/S0_4.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-  
-  
-  
+  saveRDS(df.motif_nucleotidePositionPartitions, paste(folder_tmp, "df.motif_nucleotidePositionPartitions.rds", sep = "/"))
+
 }

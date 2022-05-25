@@ -1,3 +1,5 @@
+folder_output = "output"
+
 b.firstRun = FALSE 
 n.chromosomes <- 10
 
@@ -6,8 +8,7 @@ b.disequilibriumLinkageHandling <- TRUE
 b.load_filtered_binding_peaks = TRUE
 b.doInitialHomozygousFilter <- FALSE
 b.save_intermediate_results <- TRUE
-b.load_motif_analysis <- TRUE
-b.load_chip_analysis <- TRUE
+
 
 minReadDepth = 50
 th.p.bQTL <- 0.001
@@ -20,7 +21,10 @@ n.cpus <- 1
 s.half_window_size <- 100
 s.half_window_size.input <- 201
 
+
+
 #### 
+
 
 v.partitions <- c("promoter_5kb", "promoter_1kb", "gene", "five_prime_UTR", "exon", "intron", "three_prime_UTR", "post_gene_1kb", "non_genic") 
 s.multiplyer <- 50
@@ -33,17 +37,16 @@ b.loadGenePartitioning <- FALSE
 
 
 
-
-
-
-#"BRRE1", "BRRE1_RC", "BRRE2","BRRE2_RC", "GBOX" => nur diese sind targets (fuer ASB explanation), others are controls
+# MOTIF
 motifs = c("CGTGCG", "CGCACG", 
-           "GTACGG", "CCGTAC",
-           "GCCGCC","CGGCGG",
-           "CGTGTG","CACACG", "CACGTG")
-names(motifs) = c("BRRE1", "BRRE1_RC", "SBP","SBP","OTHER", "OTHER","BRRE2","BRRE2_RC", "GBOX")
-v.motif_offset = c(5,5,5,5,5,5,5,5,5)
+                      "GTACGG", "CCGTAC",
+                      "GCCGCC","CGGCGG",
+                      "CGTGTG","CACACG")
+names(motifs) = c("BRRE", "BRRE", "SBP","SBP","OTHER", "OTHER","GBOX", "GBOX")
+v.motif_offset = c(5,5,5,5,6,6,5,5,5,5)
+
 motifs = toupper(motifs)
+
 
 # GWAS
 s.dist_ASB_to_GWAS = 2000

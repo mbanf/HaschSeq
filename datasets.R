@@ -1,3 +1,4 @@
+install.packages( paste(folder_data,"BSgenome.Zmays.NCBI.AGPv4/", sep ="/"), repos = NULL, type="source")
 
 require("BSgenome.Zmays.NCBI.AGPv4")
 genome <- BSgenome.Zmays.NCBI.AGPv4
@@ -5,22 +6,22 @@ genome <- BSgenome.Zmays.NCBI.AGPv4
 
 # only once - assemble the mutant genome - define output directory 
 v.mo17_files <- c("chr1.vcf","chr2.vcf","chr3.vcf","chr4.vcf","chr5.vcf","chr6.vcf","chr7.vcf","chr8.vcf","chr9.vcf","chr10.vcf")
-path.snptables <- "data/mo17_snptables/"
+path.snptables <- paste(folder_data, "mo17_snptables/", sep ="/")
 
 
-path.bQTLs <- "data/bQTL/C1_C22_YFP_mindepth50_q13_BaseQ13" #"C1_C22_YFP_q20.30.POSTth.txt"
-path.bQTLsInput <- "data/bQTL/C1_C22_Input_mindepth5_q13_BaseQ13" #"C1_C22_YFP_q20.30.POSTth.txt" - control - alle dna 50 - 50 % => hole genau die mit tf
+path.bQTLs <- paste(folder_data,"bQTL/C1_C22_YFP_mindepth50_q13_BaseQ13", sep ="/") #"C1_C22_YFP_q20.30.POSTth.txt"
+path.bQTLsInput <- paste(folder_data,"bQTL/C1_C22_Input_mindepth5_q13_BaseQ13", sep ="/") #"C1_C22_YFP_q20.30.POSTth.txt" - control - alle dna 50 - 50 % => hole genau die mit tf
 
-path.bindingPeaks <- "data/GEM/C1_C22_YFP/q5_10fold/q5_10fold.GEM_events.txt"
+path.bindingPeaks <- paste(folder_data,"GEM/C1_C22_YFP/q5_10fold/q5_10fold.GEM_events.txt", sep ="/")
 
-l.path.bindingPeaksAll <- vector(mode = "list", length = 6)
-l.path.bindingPeaksAll[[1]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_1_S1_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
-l.path.bindingPeaksAll[[2]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_2_S2_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
-l.path.bindingPeaksAll[[3]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_3_S3_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
-l.path.bindingPeaksAll[[4]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_4_S4_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
-l.path.bindingPeaksAll[[5]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_5_S5_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
-l.path.bindingPeaksAll[[6]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_6_S6_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
-
+# TODO: where are these? - general questions
+# l.path.bindingPeaksAll <- vector(mode = "list", length = 6)
+# l.path.bindingPeaksAll[[1]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_1_S1_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
+# l.path.bindingPeaksAll[[2]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_2_S2_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
+# l.path.bindingPeaksAll[[3]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_3_S3_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
+# l.path.bindingPeaksAll[[4]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_4_S4_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
+# l.path.bindingPeaksAll[[5]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_5_S5_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
+# l.path.bindingPeaksAll[[6]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/Output/BZR1_6_S6_L002_R/q2_5fold/q2_5fold.GEM_events.bed"
 
 
 ###
@@ -29,12 +30,12 @@ l.path.bindingPeaksAll[[6]] ="/Volumes/Shared/Everyone/Michael_Thomas/AGPv4/GEM/
 message("loading gene annotation datasets...")
 strt<-Sys.time()
 
-path.gene_function<- "data/GeneAnnotation/B73v4_gene_function.txt"
-path.geneID_conversion <- "data/GeneAnnotation/maize.v3TOv4.geneIDhistory.txt"
-path.gff <- "data/GeneAnnotation/Zea_mays.AGPv4.36.chr.gff3"
+path.gene_function<- paste(folder_data,"GeneAnnotation/B73v4_gene_function.txt", sep ="/")
+path.geneID_conversion <- paste(folder_data,"GeneAnnotation/maize.v3TOv4.geneIDhistory.txt", sep ="/")
+path.gff <- paste(folder_data,"GeneAnnotation/Zea_mays.AGPv4.36.chr.gff3", sep ="/")
 
 df.gff <- read.table(path.gff, header = FALSE, sep = "\t", fill = TRUE, stringsAsFactors = FALSE, quote = "")
-# 
+
 # df.gff["id"] <- sapply(df.gff$V9, function(m) {gsub("Name=", "", unlist(strsplit(m, ";"))[2])})
 # df.gff$id <- gsub("Parent=","", df.gff$id)
 # df.gff$id <- gsub(".v6a","", df.gff$id)
@@ -77,31 +78,40 @@ print(Sys.time() - strt)
 
 message("loading GWAS datasets...")
 strt<-Sys.time()
-path.phenotype_gwas.original <- "data/GWAS/AGPv4_uplifted_Wallace_etal_2014_PLoSGenet_GWAS_hits-150112.txt"
+path.phenotype_gwas.original <- paste(folder_data,"GWAS/AGPv4_uplifted_Wallace_etal_2014_PLoSGenet_GWAS_hits-150112.txt", sep ="/")
 df.phenotype_gwas.original <- read.table(path.phenotype_gwas.original, header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
 df.phenotype_gwas.original <- subset(df.phenotype_gwas.original, df.phenotype_gwas.original$rmip >= 5)
-df.phenotype_gwas <- df.phenotype_gwas.original
+df.phenotype_gwas <- df.phenotype_gwas.original#
 v.traits  <- unique(df.phenotype_gwas$trait)
 print(Sys.time() - strt)
 
 
 
-message("loading Chip binding peaks")
+message("loading Chip binding peaks") # ZmBZR1 Chip-seq binding peaks
 l.path.ChipSeqB73 <- vector(mode = "list", length = 3)
-l.path.ChipSeqB73[[1]] ="data/ChipSeq/B73_ChIP/AGTCAA/q2_5fold/q2_5fold.GEM_events.txt"
-l.path.ChipSeqB73[[2]] ="data/ChipSeq/B73_ChIP/ATGTCA/q2_5fold/q2_5fold.GEM_events.txt"
-l.path.ChipSeqB73[[3]] ="data/ChipSeq/B73_ChIP/CCGTCC/q2_5fold/q2_5fold.GEM_events.txt"
+l.path.ChipSeqB73[[1]] =paste(folder_data,"ChipSeq/B73_ChIP/AGTCAA/q2_5fold/q2_5fold.GEM_events.txt", sep ="/")
+l.path.ChipSeqB73[[2]] =paste(folder_data,"ChipSeq/B73_ChIP/ATGTCA/q2_5fold/q2_5fold.GEM_events.txt", sep ="/")
+l.path.ChipSeqB73[[3]] =paste(folder_data,"ChipSeq/B73_ChIP/CCGTCC/q2_5fold/q2_5fold.GEM_events.txt", sep ="/")
 
 
 
 message("load gene orthologs")
-path.gene_orthologs <- "data/GeneAnnotation/Phytozome13_anno_1_1.txt"
+path.gene_orthologs <- paste(folder_data,"GeneAnnotation/Phytozome13_anno_1_1.txt", sep ="/")
 df.gene_orthologs = read.table(path.gene_orthologs, header=T, stringsAsFactors = FALSE, sep = "\t", fill = T) # TODO: when to use this vs the old ones? is this separated?
 
 
 
-path.gene_orthologs <- "data/GeneAnnotation/Zmays_284_Ensembl-18_2010-01-MaizeSequence.annotation_info.txt"
+path.gene_orthologs <- paste(folder_data,"GeneAnnotation/Zmays_284_Ensembl-18_2010-01-MaizeSequence.annotation_info.txt", sep ="/")
 df.gene_orthologs = read.table(path.gene_orthologs, header=T, stringsAsFactors = FALSE, sep = "\t", fill = T)
+
+
+
+# FILES
+
+path.rnaseq.down_regulated <- "data/expression/BR_repressed_adjpvalue_0.05&l2FC_0.5.txt"
+path.rnaseq.up_regulated <- "data/expression/BR_induced_adjpvalue_0.05&l2FC_0.5.txt"
+path.rnaseq.ATBES1_targets <- "data/expression/AtBES1_targets.txt"
+
 
 
 
@@ -190,70 +200,71 @@ df.gene_orthologs = read.table(path.gene_orthologs, header=T, stringsAsFactors =
 # 
 # 
 # ###? 
-# 
-message("preparing mutant genome")
 
-df.snp_positions <- c()
-l.genome.mutant <- vector(mode = "list", length = n.chromosomes)
-# welche haben laenge
-for(i in 1:n.chromosomes){
-  
-  print(paste("processing chromosome ", i))
-  
-  df.snp.pos <- readRDS(paste("tmp/df.snp.pos_",i, ".rds"))
-  
-  # n.snps <- n.snps + length(df.snp.pos)
-  
-  # remove heterozygote snps
-  # idx.snps <- which(lapply(df.snp.pos@elementMetadata$ALT, length) == 1)
-  
-  # A - generic SNPs
-  #vec.snp.pos <- as.numeric(df.snp.pos@ranges@start[idx.snps])
-  vec.snp.pos <- as.numeric(df.snp.pos@ranges@start)
-  # vec.snp.bases <- as.character(unlist(df.snp.pos@elementMetadata$ALT)) #
-  
-  # vec.snp.bases <- as.character(unlist(lapply(df.snp.pos@elementMetadata$ALT, function(m) m[1])))
-  vec.ref.bases <- as.character(df.snp.pos@elementMetadata$REF)
-  
-  vec.snp.bases <- CharacterList(df.snp.pos@elementMetadata$ALT)
-  vec.snp.bases = unstrsplit(vec.snp.bases, sep = ",")
-  vec.snp.bases <- gsub("\\,.*", "", vec.snp.bases)
-  
-  #vec.snp.bases <- as.character(unlist(df.snp.pos@elementMetadata$ALT[idx.snps]))
-  
-  vec.snp.bases <- ifelse(vec.snp.bases == "<DEL>", "N",vec.snp.bases) # both represented separately
-  vec.snp.bases <- ifelse(vec.snp.bases == "<INS>", "N",vec.snp.bases)
-  
-  # remove empty strings #
-  idx.snp.exceptions <- which(vec.snp.bases == "")
-  
-  if(length(idx.snp.exceptions) > 0){
-    vec.snp.pos <- vec.snp.pos[-idx.snp.exceptions]
-    vec.snp.bases <- vec.snp.bases[-idx.snp.exceptions]
-    vec.ref.bases <- vec.ref.bases[-idx.snp.exceptions]
-  }
-  
-  df.snp_positions.i <- data.frame(ID = paste(i ,"_", vec.snp.pos, sep ="") , chromosome = rep(paste(i ,"_maternal", sep ="") , length(vec.snp.pos)) ,
-                                   position = vec.snp.pos, strand =  rep(1, length(vec.snp.pos)),
-                                   Ref_SNP = paste(vec.ref.bases ,"/", vec.snp.bases, sep =""))
-  
-  df.snp_positions <- rbind(df.snp_positions, df.snp_positions.i)
-  
-  genome.reference <- DNAString(genome[[i]])
-  genome.mutant    <- replaceLetterAt(genome.reference, vec.snp.pos, vec.snp.bases) # vergleich vor austausch
-  
-  l.genome.mutant[[i]] <- genome.mutant
-  
-  
-  #  v.sequences <- unlist(lapply(l.sequences, function(m) {m[[1]]}))
-  if(FALSE){
-    Sequences = DNAStringSet(genome.mutant)
-    #Sequences <- read.DNAStringSet(FastaFile, "fasta")
-    names(Sequences) <- as.character(paste("chr",i,sep = ""))
-    writeXStringSet(Sequences, paste("output/mo17Genome/chr",i,".fasta", sep = ""), format="fasta")
-  }
-  
-}
+# # TODO: make unique - how the tmp stuff has been produced
+# message("preparing mutant genome")
+# 
+# df.snp_positions <- c()
+# l.genome.mutant <- vector(mode = "list", length = n.chromosomes)
+# # welche haben laenge
+# for(i in 1:n.chromosomes){
+# 
+#   print(paste("processing chromosome ", i))
+# 
+#   df.snp.pos <- readRDS(paste("tmp/df.snp.pos_",i, ".rds")) # TODO: fix version in onedrive etc... 
+# 
+#   # n.snps <- n.snps + length(df.snp.pos)
+# 
+#   # remove heterozygote snps
+#   # idx.snps <- which(lapply(df.snp.pos@elementMetadata$ALT, length) == 1)
+# 
+#   # A - generic SNPs
+#   #vec.snp.pos <- as.numeric(df.snp.pos@ranges@start[idx.snps])
+#   vec.snp.pos <- as.numeric(df.snp.pos@ranges@start)
+#   # vec.snp.bases <- as.character(unlist(df.snp.pos@elementMetadata$ALT)) #
+# 
+#   # vec.snp.bases <- as.character(unlist(lapply(df.snp.pos@elementMetadata$ALT, function(m) m[1])))
+#   vec.ref.bases <- as.character(df.snp.pos@elementMetadata$REF)
+# 
+#   vec.snp.bases <- CharacterList(df.snp.pos@elementMetadata$ALT)
+#   vec.snp.bases = unstrsplit(vec.snp.bases, sep = ",")
+#   vec.snp.bases <- gsub("\\,.*", "", vec.snp.bases)
+# 
+#   #vec.snp.bases <- as.character(unlist(df.snp.pos@elementMetadata$ALT[idx.snps]))
+# 
+#   vec.snp.bases <- ifelse(vec.snp.bases == "<DEL>", "N",vec.snp.bases) # both represented separately
+#   vec.snp.bases <- ifelse(vec.snp.bases == "<INS>", "N",vec.snp.bases)
+# 
+#   # remove empty strings #
+#   idx.snp.exceptions <- which(vec.snp.bases == "")
+# 
+#   if(length(idx.snp.exceptions) > 0){
+#     vec.snp.pos <- vec.snp.pos[-idx.snp.exceptions]
+#     vec.snp.bases <- vec.snp.bases[-idx.snp.exceptions]
+#     vec.ref.bases <- vec.ref.bases[-idx.snp.exceptions]
+#   }
+# 
+#   df.snp_positions.i <- data.frame(ID = paste(i ,"_", vec.snp.pos, sep ="") , chromosome = rep(paste(i ,"_maternal", sep ="") , length(vec.snp.pos)) ,
+#                                    position = vec.snp.pos, strand =  rep(1, length(vec.snp.pos)),
+#                                    Ref_SNP = paste(vec.ref.bases ,"/", vec.snp.bases, sep =""))
+# 
+#   df.snp_positions <- rbind(df.snp_positions, df.snp_positions.i)
+# 
+#   genome.reference <- DNAString(genome[[i]])
+#   genome.mutant    <- replaceLetterAt(genome.reference, vec.snp.pos, vec.snp.bases) # vergleich vor austausch
+# 
+#   l.genome.mutant[[i]] <- genome.mutant
+# 
+# 
+#   #  v.sequences <- unlist(lapply(l.sequences, function(m) {m[[1]]}))
+#   if(FALSE){
+#     Sequences = DNAStringSet(genome.mutant)
+#     #Sequences <- read.DNAStringSet(FastaFile, "fasta")
+#     names(Sequences) <- as.character(paste("chr",i,sep = ""))
+#     writeXStringSet(Sequences, paste("output/mo17Genome/chr",i,".fasta", sep = ""), format="fasta")
+#   }
+# 
+# }
 # 
 # if(FALSE){
 #   write.table(df.snp_positions,  paste("output/df.snp_positions.csv", sep = ""), col.names = FALSE, row.names = FALSE, sep ="\t")
