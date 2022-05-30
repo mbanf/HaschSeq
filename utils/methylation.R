@@ -9,29 +9,22 @@
 #' @examples
 #' cat_function()
 analyse_asb_methylation_vs_postfrequency = function(l.SNPs=l.SNPs,
-                                                    th.bp_offset = 20){
-  
-  th.bp_offset = 20
-  th.distance_to_ASB = 2000
-  n.chromosomes <- 10
-  
-  n.cpus <- 1
-  # n.binWidth = 20
-  b.val = TRUE
-  v.species = c("Mo17", "B73")
-  
-  # v.binWidth = 
-  degrees = 15
-  th.distance_to_ASB = 5000
-  th.padding = 50
-  width = 6
-  height = 4
-  
-  group = "genic_and_nongenic"
+                                                    th.bp_offset = 20,
+                                                    th.distance_to_ASB = 2000,
+                                                    n.chromosomes = 10,
+                                                    n.cpus = 1,
+                                                    b.val = TRUE,
+                                                    v.species = c("Mo17", "B73"),
+                                                    degrees = 15,
+                                                    th.distance_to_ASB = 5000,
+                                                    th.padding = 50,
+                                                    width = 6,
+                                                    height = 4,
+                                                    group = "genic_and_nongenic"
+                                                    ){
   
   # l.SNPs <- readRDS(paste("D:/HashSeq/tmp/l.bQTL_gene_partitioning_withGeneDistances_backgroundSampled_117.rds", sep = ""))
-  
-  
+
   message("plot asb methylation values versus post frequency")
   
   df.ASBs <- l.SNPs[[1]]
@@ -43,7 +36,7 @@ analyse_asb_methylation_vs_postfrequency = function(l.SNPs=l.SNPs,
   l.SNP_selection[[1]] = df.ASBs
   l.SNP_selection[[2]] = df.bpSNPs
   
-  v.filenames <- c("data/methylation/GSE94291_DNase_ist.bedGraph", 
+  v.filenames <- c("data/dnase/GSE94291_DNase_ist.bedGraph", 
                    "data/methylation/B73_CpG.bw", 
                    "data/methylation/MO17_CpG.bw",
                    
@@ -141,7 +134,7 @@ analyse_asb_methylation_vs_postfrequency = function(l.SNPs=l.SNPs,
   
   # saveRDS(l.SNPs_w_chromatin, "l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds")
   
-  l.SNPs_w_chromatin = readRDS("l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds")
+  l.SNPs_w_chromatin = readRDS("tmp_test/l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds")
   
   
   l.diff_data = vector(mode = "list", length = 3)
@@ -338,8 +331,32 @@ analyse_asb_methylation_vs_postfrequency = function(l.SNPs=l.SNPs,
 }
 
 
-
-asb_distance_vs_methylation <- function(df.ASBs, do.plot = F){
+asb_distance_vs_methylation <- function(df.ASBs, 
+                                        th.distance_to_ASB = 2000,
+                                        n.chromosomes = 10,
+                                        n.cpus = 4,
+                                        v.binWidth = c(20,40,60,75,100),
+                                        b.val = TRUE,
+                                        v.species = c("Mo17", "B73"),
+                                        v.groups = c("all", "genic", "non_genic"),
+                      
+                                        v.species = c("Mo17", "Mo17" , "B73", "B73"),
+                                        v.stringency = c("< 0.5 | > 0.5", "< 0.15 | > 0.85", "< 0.5 | > 0.5", "< 0.15 | > 0.85"),
+                                        
+                                        v.filenames = c("data/methylation/B73_CHG.bw", 
+                                                         "data/methylation/B73_CHH.bw", 
+                                                         "data/methylation/B73_CpG.bw", 
+                                                         "data/methylation/MO17_CHG.bw", 
+                                                         "data/methylation/MO17_CHH.bw", 
+                                                         "data/methylation/MO17_CpG.bw"),
+                                        
+                                        v.datasets = c("B73_CHG", "B73_CHH", "B73_CpG", "MO17_CHG", "MO17_CHH", "MO17_CpG"),
+                                        v.formats = c("bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig"),
+                                        
+                                        folder_tmp = "tmp",
+                                        folder_output = "results",
+                                        
+                                        do.plot = F){
   
   # Genomic feature profiling of ASBs (Methylation)
   
@@ -350,35 +367,8 @@ asb_distance_vs_methylation <- function(df.ASBs, do.plot = F){
   # affinity bound regions were defined by a post frequency of >= 0.85 or <= 0.15, respectively
   # and oppositely for Mo17 by a post frequency <= 0.15 and >= 0.85), respectively.
   
-  ### D:\junkDNA.ai\Projects\HASCHSEQ\HaschSeq\datasets\Methylation_ASB_distances
-  
-  # df.ASBs # readRDS(paste("tmp/l.bQTL_gene_partitioning_withGeneDistances_backgroundSampled_", timeStamp, ".rds", sep = ""))[[1]]
-  
-  th.distance_to_ASB <- 2000
-  n.chromosomes <- 10
-  
-  n.cpus <- 4
-  v.binWidth = c(20,40,60,75,100)
-  b.val = TRUE
-  v.species = c("Mo17", "B73")
-  v.groups <- c("all", "genic", "non_genic")
-  
-  v.species <- c("Mo17", "Mo17" , "B73", "B73")
-  v.stringency <- c("< 0.5 | > 0.5", "< 0.15 | > 0.85", "< 0.5 | > 0.5", "< 0.15 | > 0.85")
-  
   names(v.species) <- v.species 
   names(v.stringency) <- v.species
-  
-  v.filenames <- c("data/methylation/B73_CHG.bw", 
-                   "data/methylation/B73_CHH.bw", 
-                   "data/methylation/B73_CpG.bw", 
-                   "data/methylation/MO17_CHG.bw", 
-                   "data/methylation/MO17_CHH.bw", 
-                   "data/methylation/MO17_CpG.bw")
-  
-  v.datasets <- c("B73_CHG", "B73_CHH", "B73_CpG", "MO17_CHG", "MO17_CHH", "MO17_CpG")
-  v.formats <- c("bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig")
-  
   
   for(b in 1:length(v.binWidth)){
     n.binWidth = v.binWidth[b]
@@ -538,23 +528,15 @@ asb_distance_vs_methylation <- function(df.ASBs, do.plot = F){
         }
         
         l.res_dists[[k]] <- df.distSet
-        
         rm(df.dataset)
         
       }
       
-      saveRDS(l.res_dists, paste("tmp/l.res_dists_novel_methylation_",v.datasets[k], "_", group,"_", n.binWidth, "_", timeStamp, ".rds", sep = ""))
-      #saveRDS(l.res_dists, "tmp/l.res_dists_novel_methylation_datasets.rds")
+      saveRDS(l.res_dists, paste(folder_tmp, paste("l.res_dists_novel_methylation_",v.datasets[k], "_", group,"_", n.binWidth, "_", timeStamp, ".rds", sep = ""), sep ="/"))
       
-      # l.res_dists <- readRDS("tmp/l.res_dists_novel_methylation_datasets.rds")
-      
-      # store datasets 
       for(k in 1:length(v.datasets)){
-        
         df.distSet <- l.res_dists[[k]]
-        # write.csv(df.distSet, paste("output/df.distance_plots_",v.datasets[k], "_", timeStamp, ".csv", sep = ""))
-        # write.table(df.distSet, paste("output/methylation/df.distance_plots_",v.datasets[k], "_", timeStamp, ".txt", sep = ""), sep = "\t", row.names = FALSE)
-        write.table(df.distSet, paste("figures_paper/DistancePlots/df.distance_plots_novel_methylation_",v.datasets[k], "_", group,"_", n.binWidth,"_", timeStamp, ".txt", sep = ""), sep = "\t", row.names = FALSE) 
+        write.table(df.distSet, paste(folder_output, paste("df.distance_plots_novel_methylation_",v.datasets[k], "_", group,"_", n.binWidth,"_", timeStamp, ".txt", sep = ""), sep ="/"), sep = "\t", row.names = FALSE)
       }
       
       l.res_plots <- vector(mode = "list", length = length(v.datasets))
@@ -601,16 +583,12 @@ asb_distance_vs_methylation <- function(df.ASBs, do.plot = F){
       }
       
       names(l.res_plots) <- v.datasets 
-      #saveRDS(l.res_plots, paste("tmp/l.novel_methylation_datasets_distance_plots_", timeStamp, ".rds", sep = ""))
-      saveRDS(l.res_plots, paste("tmp/l.novel_methylation_datasets_distance_plots_",v.datasets[k], "_", group,"_", n.binWidth , "_", timeStamp, ".rds", sep = ""))
+      saveRDS(l.res_plots, paste(folder_tmp, paste("l.novel_methylation_datasets_distance_plots_",v.datasets[k], "_", group,"_", n.binWidth , "_", timeStamp, ".rds", sep = ""), sep ="/"))
       
-      
+
       for(k in 1:length(v.datasets)){
-        
         df.distPlot <- l.res_plots[[k]]
-        #write.table(df.distPlot, paste("output/df.novel_methylation_datasets_distance_plots_binned_",v.datasets[k], "_", timeStamp, ".txt", sep = ""), sep = "\t", row.names = FALSE)
-        write.table(df.distPlot, paste("figures_paper/DistancePlots/df.novel_methylation_datasets_distance_plots_binned_",v.datasets[k], "_", group,"_", n.binWidth, "_", timeStamp, ".txt", sep = ""), sep = "\t", row.names = FALSE)
-        
+        write.table(df.distPlot, paste(folder_output, paste("df.novel_methylation_datasets_distance_plots_binned_",v.datasets[k], "_", group,"_", n.binWidth, "_", timeStamp, ".txt", sep = ""), sep ="/"), sep = "\t", row.names = FALSE)
       }
       
       # 6 x 4
@@ -618,7 +596,7 @@ asb_distance_vs_methylation <- function(df.ASBs, do.plot = F){
 
         for(i in 1:length(l.res_plots)){
             p <- ggplot(l.res_plots[[i]], aes(x=bin, y=val, colour = color, linetype = line_type)) + stat_smooth(aes(x = bin, y = val), method = "lm",  formula = y ~ poly(x, 21), se = FALSE, n = 1000) + scale_colour_manual(values = c("green", "blue")) + theme_bw() + xlim(-950, 950)
-            pdf(paste("figures_paper/DistancePlots/Novel_Methylation/", names(l.res_plots)[i],".pdf", sep = ""), width = 6, height = 4)
+            pdf(paste(folder_output, paste("Novel_Methylation/", names(l.res_plots)[i],".pdf", sep = ""), sep ="/"), width = 6, height = 4)
             print(p)
             dev.off()
           }

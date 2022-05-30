@@ -12,6 +12,7 @@ b.write_paper = FALSE
 # TODO: find ZmvsAth_1_to_1_corrected_12084.csv
 
 # TODO: which phenotypes dataa to be used
+# TODO: enhancer data?
 
 
 source("config.R")
@@ -397,6 +398,40 @@ source("utils/methylation.R")
 # asb_distance_vs_methylation(df.ASBs)
 
 
+# df.ASBs # readRDS(paste("tmp/l.bQTL_gene_partitioning_withGeneDistances_backgroundSampled_", timeStamp, ".rds", sep = ""))[[1]]
+
+
+
+
+v.filenames = c(paste(folder_data,"methylation/B73_CHG.bw", sep = "/"),
+                paste(folder_data,"methylation/B73_CHH.bw", sep = "/"),
+                paste(folder_data,"methylation/B73_CpG.bw", sep = "/"),
+                paste(folder_data,"methylation/MO17_CHG.bw", sep = "/"),
+                paste(folder_data,"methylation/MO17_CHH.bw", sep = "/"),
+                paste(folder_data,"methylation/MO17_CpG.bw", sep = "/"))
+
+v.datasets = c("B73_CHG", "B73_CHH", "B73_CpG", "MO17_CHG", "MO17_CHH", "MO17_CpG")
+v.formats = c("bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig")
+
+
+asb_distance_vs_methylation(df.ASBs, 
+                            th.distance_to_ASB = 2000,
+                            n.chromosomes = 10,
+                            n.cpus = 4,
+                            v.binWidth = c(20,40,60,75,100),
+                            b.val = TRUE,
+                            v.species = c("Mo17", "B73"),
+                            v.groups = c("all", "genic", "non_genic"),
+                            v.species = c("Mo17", "Mo17" , "B73", "B73"),
+                            v.stringency <- c("< 0.5 | > 0.5", "< 0.15 | > 0.85", "< 0.5 | > 0.5", "< 0.15 | > 0.85"),
+                            v.filenames = v.filenames,
+                            v.datasets = v.datasets,
+                            v.formats = v.formats,
+                            folder_tmp = folder_tmp,
+                            folder_output = folder_output,
+                            do.plot = F)
+
+
 
 # To identify ASBs which may be explained by motif variation (Fig. 2h), we extracted the
 # +/- 5 bp of the high affinity BZR1 bound allele surrounding ASBs. Using R we scanned
@@ -453,6 +488,9 @@ if(b.write_paper){
   
 }
 
+
+
+message("------------ Enhancers ---------")
 
 
 
