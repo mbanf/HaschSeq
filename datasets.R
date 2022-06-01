@@ -1,4 +1,4 @@
-install.packages( paste(folder_data,"BSgenome.Zmays.NCBI.AGPv4/", sep ="/"), repos = NULL, type="source")
+# install.packages( paste(folder_data,"BSgenome.Zmays.NCBI.AGPv4/", sep ="/"), repos = NULL, type="source")
 
 require("BSgenome.Zmays.NCBI.AGPv4")
 genome <- BSgenome.Zmays.NCBI.AGPv4
@@ -96,8 +96,8 @@ l.path.ChipSeqB73[[3]] =paste(folder_data,"ChipSeq/B73_ChIP/CCGTCC/q2_5fold/q2_5
 
 
 message("load gene orthologs")
-path.gene_orthologs <- paste(folder_data,"GeneAnnotation/Phytozome13_anno_1_1.txt", sep ="/")
-df.gene_orthologs = read.table(path.gene_orthologs, header=T, stringsAsFactors = FALSE, sep = "\t", fill = T) # TODO: when to use this vs the old ones? is this separated?
+# path.gene_orthologs <- paste(folder_data,"GeneAnnotation/Phytozome13_anno_1_1.txt", sep ="/")
+# df.gene_orthologs = read.table(path.gene_orthologs, header=T, stringsAsFactors = FALSE, sep = "\t", fill = T) # TODO: when to use this vs the old ones? is this separated?
 
 
 
@@ -113,6 +113,18 @@ path.rnaseq.up_regulated <- "data/expression/BR_induced_adjpvalue_0.05&l2FC_0.5.
 path.rnaseq.ATBES1_targets <- "data/expression/AtBES1_targets.txt"
 
 
+
+
+# putative B73 enhancer (Fig. 4a) regions were extracted from Oka et al. 2017
+df.enhancer_H3K9 <- read.table("data/Enhancer_HM/GSE94251_H3K9ac_ist.bedGraph", header = FALSE, sep ="\t", quote = "", stringsAsFactors = FALSE)
+
+df.enhancer_candidates <- read.table("data/Enhancer_HM/HUSK_enhancer_candidates.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+df.enhancer_candidates <- rbind(df.enhancer_candidates, read.table("data/Enhancer_HM/V2_IST_enhancer_candidates.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE))
+
+# 1495 intergenic enhancer regions identified in B73
+df.enhancer_genes <- read.table("data/Enhancer_HM/Enhances_constutitive_expressed_specific_genes.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+df.enhancer_genes <- rbind(df.enhancer_genes, read.table("data/Enhancer_HM/Enhances_husk_specific_genes.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE))
+df.enhancer_genes <- rbind(df.enhancer_genes, read.table("data/Enhancer_HM/Enhances_V2_IST_specific_genes.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE))
 
 
 # gene model weg, 
