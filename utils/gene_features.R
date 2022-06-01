@@ -16,7 +16,6 @@ add_gene_features <- function(df.bQTL_gene_partitioning,
     }
   }
   
-  
   # gene function annotation based on AGPv4
   if(exists("df.gene_function") && !is.null(df.gene_function)){
     df.bQTL_gene_partitioning["gene.function"] <- NA
@@ -29,8 +28,6 @@ add_gene_features <- function(df.bQTL_gene_partitioning,
     }
   }
   
-  
-  
   # add arabidopsis ortholog
   if(exists("df.gene_orthologs") && !is.null(df.gene_orthologs)){
     df.bQTL_gene_partitioning["Arabidopsis_ortholog"] <- NA
@@ -41,7 +38,6 @@ add_gene_features <- function(df.bQTL_gene_partitioning,
       }
     }
   }
-  
   
   return(df.bQTL_gene_partitioning)
 }
