@@ -32,10 +32,6 @@ b.duplicateRemoval <- FALSE
 b.loadGenePartitioning <- FALSE
 
 
-
-
-
-
 #"BRRE1", "BRRE1_RC", "BRRE2","BRRE2_RC", "GBOX" => nur diese sind targets (fuer ASB explanation), others are controls
 motifs = c("CGTGCG", "CGCACG", 
            "GTACGG", "CCGTAC",

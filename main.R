@@ -4,6 +4,8 @@ folder_output = "output_test"
 folder_tmp = "tmp_test"
 folder_data = "data"
 
+# TODO: define an input SNP dataset 
+
 b.write_paper = FALSE
 # TODO: make a readme table for mapping tables to ids 
 
@@ -489,8 +491,21 @@ if(b.write_paper){
 }
 
 
-
 message("------------ Enhancers ---------")
+# In addition to cis-regulatory elements located in the close vicinity to the transcriptin
+# start site (TSS) or transcription termination site (TTS), transcriptional enhancers can be
+# located tens of kilobases from their target genes 28 . We thus hypothesized that the ASBs
+# located in intergenic regions could be located within distant enhancers and analyzed their
+# abundance around putative intergenic enhancer regions 29 . Of the ASBs distant from the
+# genes, 11% coincided with the 1495 intergenic enhancer regions identified in B73, which
+# is approximately 37-fold higher than random probability (Fig. 4a).
+
+# Putative B73 enhancer (Fig. 4a) regions were extracted from Oka et al. 2017 15 . To
+# determine potential enrichments, +/- 10 kbps surrounding enhancer regions were
+# intersected with ASBs and bgSNPs.
+
+source("utils/enhancer.R")
+
 
 
 
@@ -507,9 +522,10 @@ message("-------------- ChIP-seq ------------- ")
 if(!b.load_chip_analysis){
   source("utils/chipseq_binding_peaks.R")
   chipseq_binding_peaks(l.path.ChipSeqB73, s.half_window_size.input, n.chromosomes)
-    
+  
   df.ChipSeq.filtered <- readRDS(paste(folder_tmp,"df.ChipSeq.filtered.rds", sep ="/"))
   
+  # The ZmBZR1 ChIP-seq peaks located near 6371 putative target genes (Supplementary Table 3)
   source("utils/genomic_location.R")
   df.ChipSeq_gene_partitioning = add_genomic_location(df.ChipSeq.filtered, 
                                                       pos_peak = "pos" ,
@@ -527,7 +543,7 @@ if(!b.load_chip_analysis){
 
 if(b.write_paper){
   write.table(df.ChipSeq.filtered, paste(folder_output, "chipseq/S2.txt", sep = "/"),  row.names = FALSE, quote = FALSE, sep ="\t")
-  write.table(df.ChipSeq_gene_partitioning, paste(folder_output, "/S2.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t") # Table 3
+  write.table(df.ChipSeq_gene_partitioning, paste(folder_output, "/S3.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
 }
 
 v.chipseq_target_genes <- unique(df.ChipSeq_gene_partitioning$gene.ID)
@@ -536,30 +552,46 @@ message(nrow(df.ChipSeq.filtered), " high confidence ZmBZR1 ChiP-seq binding pea
 
 
 if(!b.load_chip_analysis){
-  # subset putative target genes with gene expression 
+  # gene expression and orthologs
+  
   source("expression/get_brassinolide_treatment_rnaseq_data.R")
   df.bQTL_RNAseq <- get_brassinolide_treatment_rnaseq_data(path.rnaseq.down_regulated, path.rnaseq.up_regulated)
   
+  # The ZmBZR1 ChIP-seq peaks located near 6371 putative target genes, which included (according to the RNA-seq analysis) 
+  # 580 and 469 BR activated and repressed genes, respectively
   df.bQTL_gene_partitioning <- merge(df.ChipSeq_gene_partitioning, df.bQTL_RNAseq, by = "gene.ID")
   df.bQTL_gene_partitioning <- subset(df.bQTL_gene_partitioning, df.bQTL_gene_partitioning$mode %in% c("up", "down"))
-  
   df.gene_set <- unique(df.bQTL_gene_partitioning[, c("gene.ID", "mode")])
- 
+  message(nrow(df.gene_set), " BR-responsive putative target genes of ZmBZR1 ( repressed ", table(df.gene_set$mode)[1]," , activated ", table(df.gene_set$mode)[2], " )")
   
   # Arabidopsis annotated orthologs
+  source("utils/gene_features.R")
+  df.ChipSeq_gene_partitioning <- add_gene_features(df.ChipSeq_gene_partitioning,
+                                                    df.gene_function,
+                                                    df.gene_orthologs,
+                                                    df.gene_conversion.AGPv3_to_AGPv4=df.geneID_conversion)
   
+  df.ChipSeq_gene_partitioning <- subset(df.ChipSeq_gene_partitioning, !is.na(df.ChipSeq_gene_partitioning$Arabidopsis_ortholog))
+  df.ChipSeq_gene_partitioning <- subset(df.ChipSeq_gene_partitioning, df.ChipSeq_gene_partitioning$Arabidopsis_ortholog != "")
+  df.ChipSeq_gene_partitioning$Arabidopsis_ortholog <- gsub("\\..*","", df.ChipSeq_gene_partitioning$Arabidopsis_ortholog)
+  df.ChipSeq_gene_partitioning = subset(df.ChipSeq_gene_partitioning, df.ChipSeq_gene_partitioning$non_genic == "no")
+  message(length(unique(df.ChipSeq_gene_partitioning$gene.ID)), " BR-responsive putative target genes of ZmBZR1 with ", length(unique(df.ChipSeq_gene_partitioning$Arabidopsis_ortholog)), " Arabidopsis orthologs" )
   
+
 }else{
+  
+  
   
 }
 
-message(nrow(df.bQTL_RNAseq), " BR-responsive genes ( repressed ", table(df.bQTL_RNAseq$mode)[1]," , activated ", table(df.bQTL_RNAseq$mode)[2], " )")
-message(nrow(df.gene_set), " BR-responsive putative target genes of ZmBZR1 ( repressed ", table(df.gene_set$mode)[1]," , activated ", table(df.gene_set$mode)[2], " )")
+# message(nrow(df.bQTL_RNAseq), " BR-responsive genes ( repressed ", table(df.bQTL_RNAseq$mode)[1]," , activated ", table(df.bQTL_RNAseq$mode)[2], " )")
+message(length(unique(df.ChipSeq_gene_partitioning$gene.ID)), " BR-responsive putative target genes of ZmBZR1 with ", length(unique(df.ChipSeq_gene_partitioning$Arabidopsis_ortholog)), " Arabidopsis orthologs" )
 
 
 if(b.write_paper){
-  # write.table(df.bQTL_RNAseq, paste(folder_output, "/S1.txt", sep = ""), quote = FALSE, row.names = FALSE, sep = "\t")
+  write.table(df.ChipSeq_gene_partitioning, paste(folder_output, "/S4.txt", sep = ""), quote = FALSE, row.names = FALSE, sep = "\t")
 }
+
 
 
 
@@ -569,10 +601,7 @@ if(b.write_paper){
 message("Gene expression and orthologs")
 
 df.bQTL_RNAseq <- get_brassinolide_treatment_rnaseq_data(path.rnaseq.down_regulated, path.rnaseq.up_regulated, path.rnaseq.ATBES1_targets)
-
-df.bQTL_RNAseq
-message("Number of BR responsive genes: ", nrow(df.bQTL_RNAseq) )
-
+message(nrow(df.bQTL_RNAseq), " BR-responsive genes ( repressed ", table(df.bQTL_RNAseq$mode)[1]," , activated ", table(df.bQTL_RNAseq$mode)[2], " )")
 if(b.write_paper){
   write.table(df.bQTL_RNAseq, paste(folder_output, "/S1.txt", sep = ""), quote = FALSE, row.names = FALSE, sep = "\t")
 }
@@ -586,15 +615,12 @@ df.ASB_gene_partitioning <- add_gene_features(df.ASB_gene_partitioning,
                                               df.gene_orthologs,
                                               df.gene_conversion.AGPv3_to_AGPv4=df.geneID_conversion)
 
+df.ASB_gene_partitioning <- subset(df.ASB_gene_partitioning, !is.na(df.ASB_gene_partitioning$Arabidopsis_ortholog))
+df.ASB_gene_partitioning <- subset(df.ASB_gene_partitioning, df.ASB_gene_partitioning$Arabidopsis_ortholog != "")
+df.ASB_gene_partitioning$Arabidopsis_ortholog <- gsub("\\..*","", df.ASB_gene_partitioning$Arabidopsis_ortholog)
+df.ASB_gene_partitioning = subset(df.ASB_gene_partitioning, df.ASB_gene_partitioning$non_genic == "no")
 
 
-# check for BR regulated (up and down)
-length(unique(test$gene.ID)) # 6371
-v.distribution <- apply(test[,v.partitions], 2, table)["yes",] 
-v.distribution / sum(v.distribution)
-
-length(intersect(df.rnaseq.down_regulated$X, unique(test$gene.ID))) # 580
-length(intersect(df.rnaseq.up_regulated$X, unique(test$gene.ID))) # 469
 
 
 # TODO: where are these datasets
@@ -634,23 +660,7 @@ length(unique(df.bQTL_gene_partitioning.subset$gene.ID))
 length(unique(df.bQTL_gene_partitioning.subset$Arabidopsis_ortholog))
 
 
-df.ChipSeq.gene_partitioning.subset <- subset(df.ChipSeq.gene_partitioning, !is.na(df.ChipSeq.gene_partitioning$Arabidopsis_ortholog))
-df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog <- gsub("\\..*","", df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)
 
-# v.genePartitions = c("promoter_5kb", "promoter_1kb","gene", "five_prime_UTR", "intron", "CDS", "three_prime_UTR", "exon", "post_gene_1kb")
-table(df.ChipSeq_gene_partitioning$non_genic)
-test = subset(df.ChipSeq_gene_partitioning, df.ChipSeq_gene_partitioning$non_genic == "no")
-length(unique(test$gene.ID))
-
-test2 = add_features_to_gene_partitioning(test)
-length(unique(test2$Arabidopsis_ortholog))
-
-test2 = test2[,c("gene.ID", "Arabidopsis_ortholog")]
-test3 = subset(test2, !is.na(test2$Arabidopsis_ortholog))
-
-write.table(test3, "S4.txt", sep ="\t", row.names = F, quote = F)
-
-test = read.table("manuscript/supplement/Table_S4.txt", sep ="\t", header = T)
 
 
 
