@@ -1,4 +1,185 @@
+# To determine potential enrichments, +/- 10 kbps surrounding enhancer regions were intersected with ASBs and bgSNPs.
 
+snp_to_enhancer_distance <- function(df.bQTLs, 
+                                     df.enhancer,
+                                     n.binWidth = 10,
+                                     n.maxDist = 10000){
+  
+  v.chromosomes <- unique(df.enhancer$chr)
+  
+  df.bQTLs_w_enhancer_annotation <- c() 
+  for(c in v.chromosomes){
+    
+    df.enhancer.chr <- subset(df.enhancer, df.enhancer$chr == c)
+    df.bQTLs.chr <- subset(df.bQTLs, df.bQTLs$`B73-chr` == c) 
+    
+    df.bQTLs.chr <- subset(df.bQTLs.chr, df.bQTLs.chr$non_genic == "yes")
+    df.bQTLs.chr["in_enhancer_region"] <- F
+    df.bQTLs.chr["dist_to_closest_enhancer_region"] <- NA # distance 
+    
+    for(j in 1:nrow(df.bQTLs.chr)){
+      b.in_enhancer_region <- any(df.enhancer.chr$start < df.bQTLs.chr$`B73-pos`[j] & df.bQTLs.chr$`B73-pos`[j] < df.enhancer.chr$end)
+      if(b.in_enhancer_region){
+        df.bQTLs.chr$in_enhancer_region[j] = T
+        df.bQTLs.chr$dist_to_closest_enhancer_region[j] <- 0
+        
+      }else{
+        # identify the closest enhancer region to (before and behind)
+        v.dist.abs <- c(abs(df.bQTLs.chr$`B73-pos`[j] - df.enhancer.chr$start), abs(df.bQTLs.chr$`B73-pos`[j] - df.enhancer.chr$end)) 
+        v.dist.raw <- c((df.bQTLs.chr$`B73-pos`[j] -  df.enhancer.chr$start), (df.bQTLs.chr$`B73-pos`[j] - df.enhancer.chr$end))
+        idx <- which(v.dist.abs == min(v.dist.abs))[1]
+        df.bQTLs.chr$dist_to_closest_enhancer_region[j] <- v.dist.raw[idx]
+      }
+    }
+    df.bQTLs_w_enhancer_annotation <- rbind(df.bQTLs_w_enhancer_annotation, df.bQTLs.chr)
+  }
+
+  # is not in enhancer region 
+  v.dist_to_ASB <- df.bQTLs_w_enhancer_annotation$dist_to_closest_enhancer_region
+  v.dist_to_ASB <- v.dist_to_ASB[v.dist_to_ASB > -n.maxDist & v.dist_to_ASB < n.maxDist] 
+  v.breaks_sets <- seq(-n.maxDist, n.maxDist, n.binWidth)
+  v.number_per_break <- numeric(length(v.breaks_sets))
+  names(v.number_per_break) <- v.breaks_sets
+  
+  for(j in 1:(length(v.breaks_sets) - 1)){
+    idx <- which(v.breaks_sets[j] <= v.dist_to_ASB & v.dist_to_ASB <= v.breaks_sets[j + 1])
+    if(length(idx) > 0)
+      v.number_per_break[j] <- length(idx)
+  }
+  v.number_per_break <- v.number_per_break[-length(v.number_per_break)]
+
+  return(list(df.bQTLs_w_enhancer_annotation=df.bQTLs_w_enhancer_annotation, 
+              v.dist_to_ASB=v.dist_to_ASB,
+              v.number_per_break=v.number_per_break))
+  
+}
+
+
+snp_to_enhancer_distance <- function(df.ASBs,
+                                     df.bgSNPs,
+                                     path.enhancer,
+                                     df.enhancer_genes,
+                                     n.binWidth = 10,
+                                     n.maxDist = 100000 ){
+  
+  message("Identify ASB and bgSnps distance to enhancer regulation ")
+  
+  df.enhancer <- read.table(path.enhancer, header = FALSE, sep ="\t", quote = "", stringsAsFactors = FALSE)
+  names(df.enhancer) <- c("chr", "start", "end")
+  df.enhancer$chr <- paste("B73-chr", df.enhancer$chr, sep = "")
+  
+  print(table(df.enhancer$chr))
+
+  res.ASBs.enhancer <- snp_to_enhancer_distance(df.ASBs, df.enhancer, n.binWidth, n.maxDist)
+  res.bgSNPs.enhancer <- snp_to_enhancer_distance(df.bgSNPs, df.enhancer, n.binWidth, n.maxDist)
+  
+  df.distPlot <- rbind(data.frame(bin = as.numeric(names(res.ASBs.enhancer$v.number_per_break)), val = res.ASBs.enhancer$v.number_per_break, set = "ASBs"), 
+                       data.frame(bin = as.numeric(names(res.bgSNPs.enhancer$v.number_per_break)), val = res.bgSNPs.enhancer$v.number_per_break, set = "bgSNPs"))
+  df.distDensityPlot <- rbind(data.frame(val = res.ASBs.enhancer$v.dist_to_ASB, set = "ASBs"), 
+                              data.frame(val = res.bgSNPs.enhancer$v.dist_to_ASB, set = "bgSNPs"))
+  
+  # Fig. 4. a) ASBs of ZmBZR1 are overrepresented at enhancer sites as compared to randomly selected background (bg) SNPs
+  p.dist_density <- ggplot(df.distDensityPlot, aes(x=val, fill = set)) + geom_density(aes(group=set, colour=set), alpha = 0.2) + theme_bw() + scale_colour_manual(values = c("red", "black"))
+  p.dist <- ggplot(df.distPlot, aes(x=bin, y=val,  fill = set, colour = set)) + stat_smooth(aes(x = bin, y = val), method = "lm",  formula = y ~ poly(x, 21), se = FALSE) + theme_bw() + scale_colour_manual(values = c("red", "black"))
+  
+  return(list(p.dist_density=p.dist_density, p.dist=p.dist)) 
+  
+}
+
+# 
+# snp_to_enhancer_distance <- function(l.bQTL_gene_partitioning,
+#                                      df.enhancer_genes,
+#                                      v.sets = c("ASB", "bgSNP"),
+#                                      n.binWidth = 10,
+#                                      n.maxDist = 100000 ){
+#   
+#   message("Identify ASB and bgSnps distance to enhancer regulation ")
+#   
+#   l.numbers <- vector(mode = "list", length = 2)
+#   df.distPlot <- c()
+#   df.distDensityPlot <- c()
+#   
+#   for(s in 1:2){
+#     
+#     postTotal.significant <- l.bQTL_gene_partitioning[[s]]
+#     postTotal.significant_with_enhancer_annotation <- c()
+#     
+#     v.enhancer_regulated_genes <- c()
+#     
+#     for(i in 1:n.chromosomes){
+#       
+#       df.enhancer_genes.i <- subset(df.enhancer_genes, df.enhancer_genes$chr == i)
+#       postTotal.significant.i <- subset(postTotal.significant, postTotal.significant$contig == i) 
+#       postTotal.significant.i <- subset(postTotal.significant.i, postTotal.significant.i$non_genic == "yes")
+#       postTotal.significant.i["is_in_enhancerRegion"] <- "no"
+#       postTotal.significant.i["dist_to_closest_enhancer_region"] <- NA # distance 
+#       
+#       for(j in 1:nrow(postTotal.significant.i)){
+#         b.ASB_in_enhancer_region <- any(df.enhancer_genes.i$start < postTotal.significant.i$position[j] & postTotal.significant.i$position[j] < df.enhancer_genes.i$end)
+#         if(b.ASB_in_enhancer_region){
+#           postTotal.significant.i$is_in_enhancerRegion[j] = "yes"
+#           postTotal.significant.i$dist_to_closest_enhancer_region[j] <- 0
+#           
+#         }else{
+#           # identify the closest enhancer region to (before and behind)
+#           v.dist.abs <- c(abs(postTotal.significant.i$position[j] - df.enhancer_genes.i$start), abs(postTotal.significant.i$position[j] - df.enhancer_genes.i$end)) 
+#           v.dist.raw <- c((postTotal.significant.i$position[j] -  df.enhancer_genes.i$start), (postTotal.significant.i$position[j] - df.enhancer_genes.i$end))
+#           idx <- which(v.dist.abs == min(v.dist.abs))[1]
+#           dist <- v.dist.raw[idx]
+#           postTotal.significant.i$dist_to_closest_enhancer_region[j] <- dist
+#         }
+#       }
+#       postTotal.significant_with_enhancer_annotation <- rbind(postTotal.significant_with_enhancer_annotation, postTotal.significant.i)
+#     }
+#     
+#     l.numbers[[s]] <- table(postTotal.significant_with_enhancer_annotation$is_in_enhancerRegion)
+#     sum(table(postTotal.significant_with_enhancer_annotation$is_in_enhancerRegion))
+#     
+#     # is not in enhancer region 
+#     v.dist_to_ASB <- postTotal.significant_with_enhancer_annotation$dist_to_closest_enhancer_region
+#     v.dist_to_ASB <- v.dist_to_ASB[v.dist_to_ASB > -n.maxDist & v.dist_to_ASB < n.maxDist] 
+#     v.breaks_sets <- seq(-n.maxDist, n.maxDist, n.binWidth)
+#     v.number_per_break <- numeric(length(v.breaks_sets))
+#     names(v.number_per_break) <- v.breaks_sets
+#     
+#     for(j in 1:(length(v.breaks_sets) - 1)){
+#       idx <- which(v.breaks_sets[j] <= v.dist_to_ASB & v.dist_to_ASB <= v.breaks_sets[j + 1])
+#       if(length(idx) > 0)
+#         v.number_per_break[j] <- length(idx)
+#     }
+#     
+#     v.number_per_break <- v.number_per_break[-length(v.number_per_break)]
+#     df.distPlot <- rbind(df.distPlot, data.frame(bin = as.numeric(names(v.number_per_break)), val = v.number_per_break, set = v.sets[s]))
+#     df.distDensityPlot <- rbind(df.distDensityPlot, data.frame(val = v.dist_to_ASB, set = v.sets[s]))
+#   }
+#   
+#   # comparison with bgSNPs
+#   hitInSample <- l.numbers[[1]][2]
+#   sampleSize <- l.numbers[[1]][1] + l.numbers[[1]][2]
+#   hitInPop <- l.numbers[[2]][2]
+#   popSize <- l.numbers[[2]][1] + l.numbers[[2]][2]
+#   failInPop <- popSize - hitInPop
+#   
+#   # fc <- (l.numbers[[1]][2] / l.numbers[[1]][1]) / ( l.numbers[[2]][2] / l.numbers[[2]][1])
+#   m <- matrix(c(l.numbers[[1]][2], l.numbers[[2]][2], l.numbers[[1]][1], l.numbers[[2]][1]), 2, 2)
+#   dimnames(m) <- list(
+#     group = c("ASBs", "bgSNPs"),
+#     enhancer_in_max_distance = c("yes", "no")
+#   )
+#   res <- fisher.test(m, alternative='greater') # TODO: make correct test 
+#   
+#   message("Comparing ASBs and bgSNPs with respect to distance to nearest enhancer (max. distance is ", n.maxDist, " bps)")
+#   print(m)
+#   
+#   message("Fold change of overrepresentation in ASBs vs bgSNPS is ", res$estimate , " with p-value of ", res$p.value, " (Fisher's exact test)")
+#   
+#   # Fig. 4. a) ASBs of ZmBZR1 are overrepresented at enhancer sites as compared to randomly selected background (bg) SNPs
+#   p.dist_density <- ggplot(df.distDensityPlot, aes(x=val, fill = set)) + geom_density(aes(group=set, colour=set), alpha = 0.2) + theme_bw() + scale_colour_manual(values = c("red", "black"))
+#   p.dist <- ggplot(df.distPlot, aes(x=bin, y=val,  fill = set, colour = set)) + stat_smooth(aes(x = bin, y = val), method = "lm",  formula = y ~ poly(x, 21), se = FALSE) + theme_bw() + scale_colour_manual(values = c("red", "black"))
+#  
+#   return(list(p.dist_density=p.dist_density, p.dist=p.dist)) 
+#   
+# }
 
 # df.enhancer <- df.enhancer_H3K9
 # names(df.enhancer) <- c("chr", "start",  "end", "val")
@@ -42,94 +223,6 @@
 
 
 #####
-
-# To determine potential enrichments, +/- 10 kbps surrounding enhancer regions were intersected with ASBs and bgSNPs.
-
-message("Identify ASB and bgSnps distance to enhancer regulation ")
-
-l.numbers <- vector(mode = "list", length = 2)
-df.distPlot <- c()
-df.distDensityPlot <- c()
-v.sets <- c("ASB", "bgSNP")
-
-n.binWidth <- 10
-n.maxDist <- 100000 # TODO: discuss - currently 100000 not 10000 chosen
-
-for(s in 1:2){
-  
-  postTotal.significant <- l.bQTL_gene_partitioning[[s]]
-  postTotal.significant_with_enhancer_annotation <- c()
-  
-  v.enhancer_regulated_genes <- c()
-  
-  for(i in 1:n.chromosomes){
-    
-    df.enhancer_genes.i <- subset(df.enhancer_genes, df.enhancer_genes$chr == i)
-    postTotal.significant.i <- subset(postTotal.significant, postTotal.significant$contig == i) 
-    postTotal.significant.i <- subset(postTotal.significant.i, postTotal.significant.i$non_genic == "yes")
-    postTotal.significant.i["is_in_enhancerRegion"] <- "no"
-    postTotal.significant.i["dist_to_closest_enhancer_region"] <- NA # distance 
-    
-    for(j in 1:nrow(postTotal.significant.i)){
-      b.ASB_in_enhancer_region <- any(df.enhancer_genes.i$start < postTotal.significant.i$position[j] & postTotal.significant.i$position[j] < df.enhancer_genes.i$end)
-      if(b.ASB_in_enhancer_region){
-        postTotal.significant.i$is_in_enhancerRegion[j] = "yes"
-        postTotal.significant.i$dist_to_closest_enhancer_region[j] <- 0
-      }else{
-        # identify the closest enhancer region to (before and behind)
-        v.dist.abs <- c(abs(postTotal.significant.i$position[j] - df.enhancer_genes.i$start), abs(postTotal.significant.i$position[j] - df.enhancer_genes.i$end)) 
-        v.dist.raw <- c((postTotal.significant.i$position[j] -  df.enhancer_genes.i$start), (postTotal.significant.i$position[j] - df.enhancer_genes.i$end))
-        idx <- which(v.dist.abs == min(v.dist.abs))[1]
-        dist <- v.dist.raw[idx]
-        postTotal.significant.i$dist_to_closest_enhancer_region[j] <- dist
-      }
-    }
-    postTotal.significant_with_enhancer_annotation <- rbind(postTotal.significant_with_enhancer_annotation, postTotal.significant.i)
-  }
-  
-  l.numbers[[s]] <- table(postTotal.significant_with_enhancer_annotation$is_in_enhancerRegion)
-  sum(table(postTotal.significant_with_enhancer_annotation$is_in_enhancerRegion))
-  
-  # is not in enhancer region 
-  v.dist_to_ASB <- postTotal.significant_with_enhancer_annotation$dist_to_closest_enhancer_region
-  v.dist_to_ASB <- v.dist_to_ASB[v.dist_to_ASB > -n.maxDist & v.dist_to_ASB < n.maxDist] 
-  v.breaks_sets <- seq(-n.maxDist, n.maxDist, n.binWidth)
-  v.number_per_break <- numeric(length(v.breaks_sets))
-  names(v.number_per_break) <- v.breaks_sets
-  
-  for(j in 1:(length(v.breaks_sets) - 1)){
-    idx <- which(v.breaks_sets[j] <= v.dist_to_ASB & v.dist_to_ASB <= v.breaks_sets[j + 1])
-    if(length(idx) > 0)
-      v.number_per_break[j] <- length(idx)
-  }
-  
-  v.number_per_break <- v.number_per_break[-length(v.number_per_break)]
-  df.distPlot <- rbind(df.distPlot, data.frame(bin = as.numeric(names(v.number_per_break)), val = v.number_per_break, set = v.sets[s]))
-  df.distDensityPlot <- rbind(df.distDensityPlot, data.frame(val = v.dist_to_ASB, set = v.sets[s]))
-}
-
-# comparison with bgSNPs
-hitInSample <- l.numbers[[1]][2]
-sampleSize <- l.numbers[[1]][1] + l.numbers[[1]][2]
-hitInPop <- l.numbers[[2]][2]
-popSize <- l.numbers[[2]][1] + l.numbers[[2]][2]
-failInPop <- popSize - hitInPop
-
-# fc <- (l.numbers[[1]][2] / l.numbers[[1]][1]) / ( l.numbers[[2]][2] / l.numbers[[2]][1])
-m <- matrix(c(l.numbers[[1]][2], l.numbers[[2]][2], l.numbers[[1]][1], l.numbers[[2]][1]), 2, 2)
-dimnames(m) <- list(
-  group = c("ASBs", "bgSNPs"),
-  enhancer_in_max_distance = c("yes", "no")
-)
-res <- fisher.test(m, alternative='greater') # TODO: make correct test 
-
-message("Comparing ASBs and bgSNPs with respect to distance to nearest enhancer (max. distance is ", n.maxDist, " bps)")
-print(m)
-
-message("Fold change of overrepresentation in ASBs vs bgSNPS is ", res$estimate , " with p-value of ", res$p.value, " (Fisher's exact test)")
-
-ggplot(df.distDensityPlot, aes(x=val, fill = set)) + geom_density(aes(group=set, colour=set), alpha = 0.2) + theme_bw() + scale_colour_manual(values = c("red", "black"))
-ggplot(df.distPlot, aes(x=bin, y=val,  fill = set, colour = set)) + stat_smooth(aes(x = bin, y = val), method = "lm",  formula = y ~ poly(x, 21), se = FALSE) + theme_bw() + scale_colour_manual(values = c("red", "black"))
 
 
 
