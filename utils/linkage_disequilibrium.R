@@ -4,7 +4,7 @@ linkage_disequlilibrium <- function(df.bQTLs,
                                     mode = "peak_distance",
                                     s.disequilibriumDistance = 75,
                                     n.chromosomes = 10){
-  
+  # TODO: DRY
   df.bQTLs.peak_distance <- df.bQTLs[-(1:nrow(df.bQTLs)),]
   
   for(i in 1:n.chromosomes){    
