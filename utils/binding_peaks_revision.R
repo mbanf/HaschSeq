@@ -1,7 +1,22 @@
+load_peaks <- function(path.peaks){
 
-merged_peaks <- function(df.bQTLs, 
-                         df.peaks){
+  df.peaks <- read.table(path.peaks, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")
+  # df.peaks <- df.peaks[2:nrow(df.peaks),] # TODO: do we still need this?
+  names(df.peaks) <- c("seqnames", "start", "end", "id", "val")
+  #df.peaks$seqnames <- str_replace(df.peaks$seqnames, "chr", "")
+  df.peaks["center"] <- as.numeric(unlist(lapply(strsplit(df.peaks$id, ":"), function(m) m[[2]])))
   
+  return(df.peaks)
+}
+
+
+load_filtered_peaks <- function(folder){
+  return(readRDS(paste(folder, "df.filtered_peaks.rds", sep ="/")))
+}
+
+
+bQTLs_in_peaks <- function(df.bQTLs, df.peaks, n.chromosomes = 10){
+  # TODO: DRY
   message("Estimate significant bQTLs in binding peak ranges...")
   
   df.selection <- c()
@@ -33,360 +48,131 @@ merged_peaks <- function(df.bQTLs,
         df.selection <- rbind(df.selection, df.bQTLs.Mo17.i[idx.snps,])
       }
     }
-    
-  }
-  df.selection <- unique(df.selection)
-  
-  df.selection
-}
-
-
-
-filter_peaks_w_replicaties <- function(df.bQTLs,
-                                       path.bindingPeaks,
-                                       l.path.bindingPeaksAll){
-            
-           
-  # Filter merged peaks based on replicates (5 out of 6)
-  
-  df.peaks <- read.table(path.bindingPeaks, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")
-  names(df.peaks) <- c("seqnames", "start", "end", "id", "val", "nan")
-  df.peaks$seqnames <- str_replace(df.peaks$seqnames, "chr", "")
-  df.peaks["pos.peak"] <- as.numeric(unlist(lapply(strsplit(df.peaks$id, ":"), function(m) m[[2]])))
-  
-  l.df.peaks.all <- vector(mode = "list", length = length(l.path.bindingPeaksAll))
-  for(i in 1:length(l.path.bindingPeaksAll)){
-    l.df.peaks.all[[i]] <- read.table(l.path.bindingPeaksAll[[i]], header = F, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")  
-    l.df.peaks.all[[i]] <- l.df.peaks.all[[i]][2:nrow(l.df.peaks.all[[i]]),]
-  }
-  
-  # TODO: should no longer be necessary
-  l.df.peaks.all[[1]]["left"] <- l.df.peaks.all[[1]]$V2 - s.half_window_size.input
-  l.df.peaks.all[[1]]["right"] <- l.df.peaks.all[[1]]$V3 + s.half_window_size.input
-  
-  message("Estimate significant bQTLs in binding peak ranges...")
-  
-  df.selection <- c()
-  
-  for(i in 1:n.chromosomes){    
-    
-    chr <- paste("B73-chr", i, sep = "")
-    df.peaks.B73.i <- subset(df.peaks, df.peaks$seqnames == chr)
-    df.bQTLs.B73.i <- subset(df.bQTLs, df.bQTLs$contig == chr)
-    
-    message(chr)
-    for(p in 1:nrow(df.peaks.B73.i)){
-      idx.snps <- which(df.peaks.B73.i$start[p] <= df.bQTLs.B73.i$position & df.bQTLs.B73.i$position <= df.peaks.B73.i$end[p])
-      if(length(idx.snps) > 0){
-        df.selection <- rbind(df.selection, df.bQTLs.B73.i[idx.snps,])
-      }
-    }
-    
-    chr <- paste("Mo17-chr", i, sep = "")
-    df.peaks.Mo17.i <- subset(df.peaks, df.peaks$seqnames == chr)
-    df.bQTLs.Mo17.i <- subset(df.bQTLs, df.bQTLs$`Mo17-chr` == chr)
-    
-    message(chr)
-    for(p in 1:nrow(df.peaks.Mo17.i)){
-      idx.snps <- which(df.peaks.Mo17.i$start[p] <= df.bQTLs.Mo17.i$`Mo17-pos` & df.bQTLs.Mo17.i$`Mo17-pos` <= df.peaks.Mo17.i$end[p])
-      if(length(idx.snps) > 0){
-        df.selection <- rbind(df.selection, df.bQTLs.Mo17.i[idx.snps,])
-      }
-    }
-    
-  }
-  
-  
-  
-  
-  
-  strt<-Sys.time()
-  
-  df.peaks <- read.table(path.bindingPeaks, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")
-  names(df.peaks) <- c("seqnames", "start", "end", "id", "val", "nan")
-  df.peaks$seqnames <- str_replace(df.peaks$seqnames, "chr", "")
-  
-  
-  
-  df.peaks <- read.table(path.bindingPeaks, header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
-  df.peaks["seqnames"] <- as.numeric(unlist(lapply(strsplit(df.peaks$Position, ":"), function(m) m[[1]])))
-  df.peaks["posPeak"] <- as.numeric(unlist(lapply(strsplit(df.peaks$Position, ":"), function(m) m[[2]])))
-  df.peaks["start"] <- df.peaks$posPeak - s.half_window_size
-  df.peaks["end"] <- df.peaks$posPeak + s.half_window_size
-  
-  l.df.peaks.all <- vector(mode = "list", length = length(l.path.bindingPeaksAll))
-  for(i in 1:length(l.path.bindingPeaksAll)){
-    l.df.peaks.all[[i]] <- read.table(l.path.bindingPeaksAll[[i]], header = F, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")  
-    l.df.peaks.all[[i]] <- l.df.peaks.all[[i]][2:nrow(l.df.peaks.all[[i]]),]
-  }
-  
-  # 6 von 6 
-  l.df.peaks.all[[1]]["left"] <- l.df.peaks.all[[1]]$V2 - s.half_window_size.input
-  l.df.peaks.all[[1]]["right"] <- l.df.peaks.all[[1]]$V3 + s.half_window_size.input
-  
-  if(FALSE){
-    strt<-Sys.time() 
-    df.peaks.filtered <- c()
-    for(i in 1:n.chromosomes){
-      l.peaks.chromosome <- vector(mode = "list", length = 6)
-      l.idx.blacklist <- vector(mode = "list", length = 6)
-      for(l in 1:length(l.path.bindingPeaksAll)){
-        l.peaks.chromosome[[l]] <- subset(l.df.peaks.all[[l]], l.df.peaks.all[[l]]$V1 == paste("chr", i, sep = ""))
-        l.idx.blacklist[[l]] <- numeric(nrow(l.peaks.chromosome[[l]]))
-      }
-      v.idx.keep <- numeric(nrow(l.peaks.chromosome[[1]]))
-      pb <- txtProgressBar(min = 0, max = nrow(l.peaks.chromosome[[1]]), style = 3)
-      for(j in 1:nrow(l.peaks.chromosome[[1]])){
-        setTxtProgressBar(pb, j)
-        n.found <- 0
-        for(l in 2:length(l.peaks.chromosome)){
-          b.found = FALSE
-          for(k in 1:nrow(l.peaks.chromosome[[l]])){
-            
-            if(!k %in% l.idx.blacklist[[l]]){        
-              
-              if( l.peaks.chromosome[[1]]$V1[j] == l.peaks.chromosome[[l]]$V1[k]){
-                # give me a middle 
-                if(l.peaks.chromosome[[l]]$V3[k] - 100 > l.peaks.chromosome[[1]]$left[j] & l.peaks.chromosome[[l]]$V3[k] - 100 < l.peaks.chromosome[[1]]$right[j]){
-                  n.found = n.found + 1
-                  b.found = TRUE
-                  l.idx.blacklist[[l]][k] <- k
-                  break
-                }
-              }
-            }
-          }
-          if(b.found == FALSE){
-            break
-          }
-        }
-        if(n.found == 5){
-          v.idx.keep[j] <- j  
-        }
-      }
-      close(pb) 
-      
-      v.idx.keep <- v.idx.keep[v.idx.keep != 0]
-      l.peaks.chromosome[[1]] <- l.peaks.chromosome[[1]][v.idx.keep,]
-      df.peaks.filtered <- rbind(df.peaks.filtered, l.peaks.chromosome[[1]])
-    }
-    print(Sys.time()-strt)
-    
-  }else{
-    
-    l.peaks.filtered <- readRDS(paste(folder_tmp,"l.peaks.filtered.rds", sep="/"))  
-    
-    df.peaks.filtered <- c()
-    for(i in 1:n.chromosomes){
-      df.peaks.filtered <- rbind(df.peaks.filtered, l.peaks.filtered[[i]])
-    }
-    # 
-    df.peaks.final <- c()
-    for(i in 1:n.chromosomes){
-      
-      df.peaks.chromosome <- subset(df.peaks, df.peaks$seqnames == i)
-      df.peaks.filtered.chromosome <- subset(df.peaks.filtered, df.peaks.filtered$V1 == paste("chr", i, sep = ""))
-      
-      v.idx.keep <- numeric(nrow(df.peaks.chromosome))
-      pb <- txtProgressBar(min = 0, max = nrow(df.peaks.chromosome), style = 3)
-      for(j in 1:nrow(df.peaks.chromosome)){
-        setTxtProgressBar(pb, j)
-        for(k in 1:nrow(df.peaks.filtered.chromosome)){
-          dist <- abs(df.peaks.chromosome$posPeak[j]  -  df.peaks.filtered.chromosome$V3[k] - 100)  
-          if(dist < 500){
-            v.idx.keep[j] <- j
-            break
-          }
-        }
-      }
-      close(pb)
-      
-      v.idx.keep <- v.idx.keep[v.idx.keep>0]
-      df.peaks.chromosome <- df.peaks.chromosome[v.idx.keep, ]
-      df.peaks.final <- rbind(df.peaks.final, df.peaks.chromosome)
-    }
-    
-    if(FALSE){
-      saveRDS(df.peaks.final, paste(folder_tmp, "df.peaks.final.rds", sep ="/"))  
-    }
-    
-  }
-  
-  
-  
    
+  }
+
+  return(unique(df.selection))
+}
+
+
+
+
+merge_peaks <- function(path.peaks,
+                         v.paths.peaks.replicates,
+                         i.ref=1,
+                         th.min_number = 5,
+                         folder = "tmp/"
+){
   
+  l.df.peaks <- vector(mode = "list", length = length(v.paths.peaks.replicates))
+  for(i in 1:length(v.paths.peaks.replicates)){
+    l.df.peaks[[i]] <- load_peaks(v.paths.peaks.replicates[[i]])
+  }
+  
+  print(table(l.df.peaks[[i.ref]]$seqnames))
+  v.chromosomes <- unique(l.df.peaks[[i.ref]]$seqnames)
+  
+  message("Merge peak replicate files, using file ", v.paths.peaks.replicates[i.ref], " as reference, with min number of replicates to find peak found in ref. file being ", th.min_number)
+  
+  strt<-Sys.time() 
+  
+  df.merged_peaks <- c()
+  
+  for(i in 1:length(v.chromosomes)){
+    
+    message(v.chromosomes[i])
+    
+    l.df.peaks.i <- vector(mode = "list", length = length(l.df.peaks))
+    l.idx.blacklist <- vector(mode = "list", length = length(l.df.peaks))
+    for(l in 1:length(l.df.peaks)){
+      l.df.peaks.i[[l]] <- subset(l.df.peaks[[l]], l.df.peaks[[l]]$seqnames == v.chromosomes[i])
+      l.idx.blacklist[[l]] <- numeric(nrow(l.df.peaks.i[[l]]))
+    }
+    
+    v.idx.keep <- c()
+    pb <- txtProgressBar(min = 0, max = nrow(l.df.peaks.i[[i.ref]]), style = 3)
+    for(j in 1:nrow(l.df.peaks.i[[i.ref]])){
+      setTxtProgressBar(pb, j)
+      n.found <- 0
+      for(l in 2:length(l.df.peaks.i)){
+        b.found = FALSE
+        for(k in 1:nrow(l.df.peaks.i[[l]])){
+          if(!k %in% l.idx.blacklist[[l]]){        
+            if(l.df.peaks.i[[i.ref]]$start[j] < l.df.peaks.i[[l]]$center[k] & l.df.peaks.i[[l]]$center[k] < l.df.peaks.i[[i.ref]]$end[j]){
+              n.found = n.found + 1
+              b.found = TRUE
+              l.idx.blacklist[[l]][k] <- k
+              break
+            }
+          }
+        }
+        if(b.found == FALSE){
+          break
+        }
+      }
+      if(n.found == th.min_number){
+        v.idx.keep <- c(v.idx.keep, j)  
+      }
+    }
+    close(pb) 
+    
+    df.merged_peaks <- rbind(df.merged_peaks, l.df.peaks.i[[i.ref]][v.idx.keep,])
+  }
+  
+  print(Sys.time()-strt)
+  
+  saveRDS(df.merged_peaks, paste(folder, "df.merged_peaks.rds", sep ="/"))  
+  write.csv(df.merged_peaks, paste(folder, "df.merged_peaks.csv", sep ="/"), row.names = F, quote = F)  
   
 }
 
-# TODO: peak filter should generate a file in format similar to merged peak
-individual_peaks <- function(df.bQTLs,
-                             path.bindingPeaks,
-                             l.path.bindingPeaksAll){
-  # Quality control of the resulting peaks - needs to be present in 5 out of 6 replicates
+
+
+filter_peaks_w_merged_replicaties <- function(path.peaks,
+                                       th.dist = 500,
+                                       folder = "tmp/"
+                                        ){
   
-  # s.half_window_size vs  s.half_window_size.input?
   
-  df.peaks <- read.table(path.bindingPeaks, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")
-  names(df.peaks) <- c("seqnames", "start", "end", "id", "val", "nan")
-  df.peaks$seqnames <- str_replace(df.peaks$seqnames, "chr", "")
-  df.peaks["pos.peak"] <- as.numeric(unlist(lapply(strsplit(df.peaks$id, ":"), function(m) m[[2]])))
+  df.peaks <- load_peaks(path.peaks)
   
-  l.df.peaks.all <- vector(mode = "list", length = length(l.path.bindingPeaksAll))
-  for(i in 1:length(l.path.bindingPeaksAll)){
-    l.df.peaks.all[[i]] <- read.table(l.path.bindingPeaksAll[[i]], header = F, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")  
-    l.df.peaks.all[[i]] <- l.df.peaks.all[[i]][2:nrow(l.df.peaks.all[[i]]),]
-  }
+  print(table(df.peaks$seqnames))
+  v.chromosomes <- unique(df.peaks$seqnames)
   
-  # TODO: should no longer be necessary
-  l.df.peaks.all[[1]]["left"] <- l.df.peaks.all[[1]]$V2 - s.half_window_size.input
-  l.df.peaks.all[[1]]["right"] <- l.df.peaks.all[[1]]$V3 + s.half_window_size.input
-  
-  message("Estimate significant bQTLs in binding peak ranges...")
-  
-  df.selection <- c()
-  
-  for(i in 1:n.chromosomes){    
+  df.merged_peaks <- readRDS(paste(folder, "df.merged_peaks.rds", sep ="/"))  
     
-    chr <- paste("B73-chr", i, sep = "")
-    df.peaks.B73.i <- subset(df.peaks, df.peaks$seqnames == chr)
-    df.bQTLs.B73.i <- subset(df.bQTLs, df.bQTLs$contig == chr)
+  message("filter original peaks by merged input read replicates - exclude all with center distance > ", th.dist)
+  
+  df.filtered_peaks <- c()
+  strt<-Sys.time() 
+  
+  for(i in 1:length(v.chromosomes)){
+  
+    message(v.chromosomes[i])
     
-    message(chr)
-    for(p in 1:nrow(df.peaks.B73.i)){
-      idx.snps <- which(df.peaks.B73.i$start[p] <= df.bQTLs.B73.i$position & df.bQTLs.B73.i$position <= df.peaks.B73.i$end[p])
-      if(length(idx.snps) > 0){
-        df.selection <- rbind(df.selection, df.bQTLs.B73.i[idx.snps,])
-      }
-    }
+    df.peaks.i <- subset(df.peaks, df.peaks$seqnames == v.chromosomes[i])
+    df.merged_peaks.i <- subset(df.merged_peaks, df.merged_peaks$seqnames == v.chromosomes[i])
     
-    chr <- paste("Mo17-chr", i, sep = "")
-    df.peaks.Mo17.i <- subset(df.peaks, df.peaks$seqnames == chr)
-    df.bQTLs.Mo17.i <- subset(df.bQTLs, df.bQTLs$`Mo17-chr` == chr)
-    
-    message(chr)
-    for(p in 1:nrow(df.peaks.Mo17.i)){
-      idx.snps <- which(df.peaks.Mo17.i$start[p] <= df.bQTLs.Mo17.i$`Mo17-pos` & df.bQTLs.Mo17.i$`Mo17-pos` <= df.peaks.Mo17.i$end[p])
-      if(length(idx.snps) > 0){
-        df.selection <- rbind(df.selection, df.bQTLs.Mo17.i[idx.snps,])
-      }
-    }
-    
-  }
-  
-  
-  
-  
-  
-  strt<-Sys.time()
-  
-  df.peaks <- read.table(path.bindingPeaks, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")
-  names(df.peaks) <- c("seqnames", "start", "end", "id", "val", "nan")
-  df.peaks$seqnames <- str_replace(df.peaks$seqnames, "chr", "")
-  
-  
-  
-  df.peaks <- read.table(path.bindingPeaks, header = TRUE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
-  df.peaks["seqnames"] <- as.numeric(unlist(lapply(strsplit(df.peaks$Position, ":"), function(m) m[[1]])))
-  df.peaks["posPeak"] <- as.numeric(unlist(lapply(strsplit(df.peaks$Position, ":"), function(m) m[[2]])))
-  df.peaks["start"] <- df.peaks$posPeak - s.half_window_size
-  df.peaks["end"] <- df.peaks$posPeak + s.half_window_size
-  
-  l.df.peaks.all <- vector(mode = "list", length = length(l.path.bindingPeaksAll))
-  for(i in 1:length(l.path.bindingPeaksAll)){
-    l.df.peaks.all[[i]] <- read.table(l.path.bindingPeaksAll[[i]], header = F, sep = "\t", stringsAsFactors = FALSE, fill = TRUE, quote = "")  
-    l.df.peaks.all[[i]] <- l.df.peaks.all[[i]][2:nrow(l.df.peaks.all[[i]]),]
-  }
-  
-  # 6 von 6 
-  l.df.peaks.all[[1]]["left"] <- l.df.peaks.all[[1]]$V2 - s.half_window_size.input
-  l.df.peaks.all[[1]]["right"] <- l.df.peaks.all[[1]]$V3 + s.half_window_size.input
-  
-  if(FALSE){
-    strt<-Sys.time() 
-    df.peaks.filtered <- c()
-    for(i in 1:n.chromosomes){
-      l.peaks.chromosome <- vector(mode = "list", length = 6)
-      l.idx.blacklist <- vector(mode = "list", length = 6)
-      for(l in 1:length(l.path.bindingPeaksAll)){
-        l.peaks.chromosome[[l]] <- subset(l.df.peaks.all[[l]], l.df.peaks.all[[l]]$V1 == paste("chr", i, sep = ""))
-        l.idx.blacklist[[l]] <- numeric(nrow(l.peaks.chromosome[[l]]))
-      }
-      v.idx.keep <- numeric(nrow(l.peaks.chromosome[[1]]))
-      pb <- txtProgressBar(min = 0, max = nrow(l.peaks.chromosome[[1]]), style = 3)
-      for(j in 1:nrow(l.peaks.chromosome[[1]])){
-        setTxtProgressBar(pb, j)
-        n.found <- 0
-        for(l in 2:length(l.peaks.chromosome)){
-          b.found = FALSE
-          for(k in 1:nrow(l.peaks.chromosome[[l]])){
-            
-            if(!k %in% l.idx.blacklist[[l]]){        
-              
-              if( l.peaks.chromosome[[1]]$V1[j] == l.peaks.chromosome[[l]]$V1[k]){
-                # give me a middle 
-                if(l.peaks.chromosome[[l]]$V3[k] - 100 > l.peaks.chromosome[[1]]$left[j] & l.peaks.chromosome[[l]]$V3[k] - 100 < l.peaks.chromosome[[1]]$right[j]){
-                  n.found = n.found + 1
-                  b.found = TRUE
-                  l.idx.blacklist[[l]][k] <- k
-                  break
-                }
-              }
-            }
-          }
-          if(b.found == FALSE){
-            break
-          }
-        }
-        if(n.found == 5){
-          v.idx.keep[j] <- j  
+    v.idx.keep <- c()
+    pb <- txtProgressBar(min = 0, max = nrow(df.peaks.i), style = 3)
+    for(j in 1:nrow(df.peaks.i)){
+      setTxtProgressBar(pb, j)
+      for(k in 1:nrow(df.merged_peaks.i)){
+        dist <- abs(df.peaks.i$center[j]  -  df.merged_peaks.i$center)  
+        if(dist < th.dist){
+          v.idx.keep <- c(v.idx.keep, j)
+          break
         }
       }
-      close(pb) 
-      
-      v.idx.keep <- v.idx.keep[v.idx.keep != 0]
-      l.peaks.chromosome[[1]] <- l.peaks.chromosome[[1]][v.idx.keep,]
-      df.peaks.filtered <- rbind(df.peaks.filtered, l.peaks.chromosome[[1]])
     }
-    print(Sys.time()-strt)
+    close(pb)
     
-  }else{
-    
-    l.peaks.filtered <- readRDS(paste(folder_tmp,"l.peaks.filtered.rds", sep="/"))  
-    
-    df.peaks.filtered <- c()
-    for(i in 1:n.chromosomes){
-      df.peaks.filtered <- rbind(df.peaks.filtered, l.peaks.filtered[[i]])
-    }
-    # 
-    df.peaks.final <- c()
-    for(i in 1:n.chromosomes){
-      
-      df.peaks.chromosome <- subset(df.peaks, df.peaks$seqnames == i)
-      df.peaks.filtered.chromosome <- subset(df.peaks.filtered, df.peaks.filtered$V1 == paste("chr", i, sep = ""))
-      
-      v.idx.keep <- numeric(nrow(df.peaks.chromosome))
-      pb <- txtProgressBar(min = 0, max = nrow(df.peaks.chromosome), style = 3)
-      for(j in 1:nrow(df.peaks.chromosome)){
-        setTxtProgressBar(pb, j)
-        for(k in 1:nrow(df.peaks.filtered.chromosome)){
-          dist <- abs(df.peaks.chromosome$posPeak[j]  -  df.peaks.filtered.chromosome$V3[k] - 100)  
-          if(dist < 500){
-            v.idx.keep[j] <- j
-            break
-          }
-        }
-      }
-      close(pb)
-      
-      v.idx.keep <- v.idx.keep[v.idx.keep>0]
-      df.peaks.chromosome <- df.peaks.chromosome[v.idx.keep, ]
-      df.peaks.final <- rbind(df.peaks.final, df.peaks.chromosome)
-    }
-    
-    if(FALSE){
-      saveRDS(df.peaks.final, paste(folder_tmp, "df.peaks.final.rds", sep ="/"))  
-    }
-    
+    df.filtered_peaks <- rbind(df.filtered_peaks, df.peaks.i[v.idx.keep, ])
   }
+  
+  print(Sys.time()-strt)
+  
+  write.csv(df.filtered_peaks, paste(folder, "df.filtered_peaks.csv", sep ="/"), row.names = F, quote = F)  
+  saveRDS(df.filtered_peaks, paste(folder, "df.filtered_peaks.rds", sep ="/"))  
+
 }
