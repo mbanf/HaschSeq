@@ -46,7 +46,9 @@ context_gsea <- function(tb.context.sample,
                          sampleSize,
                          popSize,
                          scale_factor = 10,
-                         th = 0.05, title = "", context = "", col_grad = c("yellow", "red")){
+                         th = 0.05, title = "", context = "", 
+                         col_grad = c("yellow", "red"), 
+                         th.pval = 0.05){
   
   d.gsea <- data.frame(context = names(tb.context.sample), 
                        p.val = rep(1, length(tb.context.sample)),
@@ -76,32 +78,81 @@ context_gsea <- function(tb.context.sample,
   rangs <- c(min(d.gsea$percent), max(d.gsea$percent))
   print(rangs)
   
-  # print(d.gsea)
+  if(p.val == 1){
+    
+    p <- d.gsea %>%
+      arrange(desc(foldchange)) %>%
+      mutate(context = factor(context, context)) %>%
+      ggplot(aes(x=context, y=foldchange, size=percent, color=p.val)) +
+      scale_colour_gradient(low = col_grad[1], high = col_grad[2], na.value = NA)
+      
+  }else{
+    
+    d.gsea["p.value"] <- ifelse(d.gsea$p.val <= th.pval, paste("<", th.pval), paste(">", th.pval))
+    
+    p <- d.gsea %>%
+      arrange(desc(foldchange)) %>%
+      mutate(context = factor(context, context)) %>%
+      ggplot(aes(x=context, y=foldchange, size=percent, color=p.value))
   
-  data <- d.gsea
-  # data$p.val <- -log10(data$p.val)
+  }
   
-  p <- data %>%
-    arrange(desc(foldchange)) %>%
-    mutate(context = factor(context, context)) %>%
-    ggplot(aes(x=context, y=foldchange, size=percent, color=p.val)) +
-    scale_colour_gradient(low = col_grad[1], high = col_grad[2], na.value = NA) +
-    ggtitle(title) +
-    geom_point(alpha=0.9) +
-    scale_size(range = rangs * scale_factor, name="Percentage") + 
-    coord_flip() +
-    xlab("") +
-    ylab(paste("Fold change (", context, "over representation)")) +
-    geom_hline(yintercept=c(1), linetype="dotted") +
-    #ylab("Adjusted P value, -log10") +
-    theme_classic() + 
-    theme(plot.title = element_text(size = 9), axis.text=element_text(size=9), axis.title=element_text(size=9,face="italic"), legend.title=element_text(size=8, face="italic"))
- 
+  p <- p + ggtitle(title) +
+        geom_point(alpha=0.9) +
+        scale_size(range = rangs * scale_factor, name="Percentage") + 
+        # coord_flip() +
+        xlab("") +
+        ylab(paste("Fold change (", context, "over representation)")) +
+        geom_hline(yintercept=c(1), linetype="dotted") +
+        theme_classic() + 
+        theme(plot.title = element_text(size = 9), 
+              axis.text=element_text(size=9), 
+              axis.title=element_text(size=9,face="italic"), 
+              axis.text.x=element_text(angle=70,hjust=1),
+              legend.title=element_text(size=8, face="italic")) 
+  
   plot(p)
-  d.gsea
-   
+  return(d.gsea)
+  
 }
 
+
+perform_gwas <- function(df.ASBs,
+                         df.bgSNPs, 
+                         n.chromosomes = 10,
+                         s.dist_to_phenotypic_snp=2000,
+                         B73.only = F, 
+                         col_grad = c("red", "yellow"),
+                         scale_factor = 10, 
+                         th.pval = 0.05){
+  
+  if(B73.only){
+    df.ASBs <- subset(df.ASBs, df.ASBs$POSTfreq > 0.5)
+    df.bgSNPs <- subset(df.bgSNPs, df.bgSNPs$POSTfreq > 0.5)
+  }
+  
+  res.ASBs <- gwas_enrichment(df.ASBs,
+                              df.phenotypic_snps, 
+                              v.partitions,
+                              n.chromosomes,
+                              s.dist_to_phenotypic_snp)
+  
+  res.bgSNPs <- gwas_enrichment(df.bgSNPs, 
+                                df.phenotypic_snps, 
+                                v.partitions,
+                                n.chromosomes,
+                                s.dist_to_phenotypic_snp)
+  
+  d.gsea <- context_gsea(tb.context.sample=res.ASBs$l.number_per_trait, 
+                         tb.context.population=res.bgSNPs$l.number_per_trait, 
+                         sampleSize = nrow(df.ASBs),
+                         popSize = nrow(df.bgSNPs),
+                         col_grad = c("red", "yellow"),
+                         scale_factor = 10, 
+                         th.pval=th.pval)
+  
+  return(list(d.gsea=d.gsea, res.ASBs=res.ASBs, res.bgSNPs=res.bgSNPs))
+}
 
 # 
 # message("GWAS analysis - comparing distances of ASBs and bgSNPs to nearest GWAS")
