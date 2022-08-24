@@ -1,8 +1,7 @@
 create_background_QTLs <- function(df.ASBs_genomic_location,
                                   df.snps_genomic_location, 
-                                  multiplyer = 10, 
-                                  v.partitions = v.partitions, 
-                                  n.chromosomes = 10,
+                                  n.bg.multiplier = 10, 
+                                  v.partitions = c("promoter_5kb", "promoter_1kb", "gene", "five_prime_UTR", "exon", "intron", "three_prime_UTR", "post_gene_1kb", "non_genic"), 
                                   seed = 1234){
 
   ###### create_background_distribution_with_similar_gene_partitioning ####
@@ -34,9 +33,16 @@ create_background_QTLs <- function(df.ASBs_genomic_location,
     df.snps.B73.chr <- subset(df.snps.B73, df.snps.B73$`B73-chr` == chr)
     df.snps.B73.chr <- subset(df.snps.B73.chr, !df.snps.B73.chr$`B73-pos` %in% df.ASBs.B73.chr$`B73-pos`)
     
+    if(!length(v.partitions)){
+      n.samples <- nrow(df.ASBs.B73.chr) * n.bg.multiplier
+      i.set <- sample(nrow(df.snps.B73.chr), n.samples, replace = FALSE)
+      df.bgSNPs <- rbind(df.bgSNPs, df.snps.B73.chr[i.set,])
+      next
+    }
+      
     for(j in 1:length(v.partitions)){
       if(v.partitions[j] != "gene" & any(df.ASBs.B73.chr[,v.partitions[j]] == "yes")){
-        n.samples <- length(which(as.character(df.ASBs.B73.chr[,v.partitions[j]]) == "yes")) * multiplyer
+        n.samples <- length(which(as.character(df.ASBs.B73.chr[,v.partitions[j]]) == "yes")) * n.bg.multiplier
         df.snps.B73.j <- df.snps.B73.chr[which(as.character(df.snps.B73.chr[,v.partitions[j]]) == "yes"),]
         i.set <- sample(nrow(df.snps.B73.j), n.samples, replace = FALSE)
         df.bgSNPs <- rbind(df.bgSNPs, df.snps.B73.j[i.set,])
@@ -56,9 +62,16 @@ create_background_QTLs <- function(df.ASBs_genomic_location,
     df.snps.Mo17.chr <- subset(df.snps.Mo17, df.snps.Mo17$`Mo17-chr` == chr)
     df.snps.Mo17.chr <- subset(df.snps.Mo17.chr, !df.snps.Mo17.chr$`Mo17-pos` %in% df.ASBs.Mo17.chr$`Mo17-pos`)
     
+    if(!length(v.partitions)){
+      n.samples <- nrow(df.ASBs.Mo17.chr) * n.bg.multiplier
+      i.set <- sample(nrow(df.snps.Mo17.chr), n.samples, replace = FALSE)
+      df.bgSNPs <- rbind(df.bgSNPs, df.snps.Mo17.chr[i.set,])
+      next
+    }
+    
     for(j in 1:length(v.partitions)){
       if(v.partitions[j] != "gene" & any(df.ASBs.Mo17.chr[,v.partitions[j]] == "yes")){
-        n.samples <- length(which(as.character(df.ASBs.Mo17.chr[,v.partitions[j]]) == "yes")) * multiplyer
+        n.samples <- length(which(as.character(df.ASBs.Mo17.chr[,v.partitions[j]]) == "yes")) * n.bg.multiplier
         df.snps.Mo17.j <- df.snps.Mo17.chr[which(as.character(df.snps.Mo17.chr[,v.partitions[j]]) == "yes"),]
         i.set <- sample(nrow(df.snps.Mo17.j), n.samples)
         df.bgSNPs <- rbind(df.bgSNPs, df.snps.Mo17.j[i.set,])
@@ -69,6 +82,10 @@ create_background_QTLs <- function(df.ASBs_genomic_location,
   
   
   df.bgSNPs <- unique(df.bgSNPs)
+  
+  if(!length(v.partitions))
+    return(df.bgSNPs)
+    
   
   # plot ratio of distribution
   
