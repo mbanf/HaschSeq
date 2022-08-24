@@ -33,13 +33,13 @@ b.loadGenePartitioning <- FALSE
 
 
 #"BRRE1", "BRRE1_RC", "BRRE2","BRRE2_RC", "GBOX" => nur diese sind targets (fuer ASB explanation), others are controls
-motifs = c("CGTGCG", "CGCACG", 
+v.motifs = c("CGTGCG", "CGCACG", 
            "GTACGG", "CCGTAC",
            "GCCGCC","CGGCGG",
            "CGTGTG","CACACG", "CACGTG")
-names(motifs) = c("BRRE1", "BRRE1_RC", "SBP","SBP","OTHER", "OTHER","BRRE2","BRRE2_RC", "GBOX")
+names(v.motifs) = c("BRRE1", "BRRE1_RC", "SBP","SBP","OTHER", "OTHER","BRRE2","BRRE2_RC", "GBOX")
 v.motif_offset = c(5,5,5,5,5,5,5,5,5)
-motifs = toupper(motifs)
+v.motifs = toupper(v.motifs)
 
 # GWAS
 s.dist_ASB_to_GWAS = 2000
