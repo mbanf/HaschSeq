@@ -5,7 +5,8 @@ add_genomic_location <- function(postTotal.significant,
                                  chr_Nr,
                                  df.gene_annotation,
                                  v.genePartitions = c("gene", "five_prime_UTR",  "CDS", "three_prime_UTR", "exon"),
-                                 n.cpus = 1){
+                                 n.cpus = 1, 
+                                 prefix = "B73-chr"){
   
   idx.pos <- which( colnames(postTotal.significant)== pos_peak)
   idx.chr <- which( colnames(postTotal.significant) == chr_Nr)
@@ -20,7 +21,9 @@ add_genomic_location <- function(postTotal.significant,
     
     message(paste("processing chromosome", i))
     
-    postTotal.significant.i <- subset(postTotal.significant, postTotal.significant[,idx.chr] == i)
+    chr.i <- paste(prefix, i, sep ="") # TODO: added for revision 
+    
+    postTotal.significant.i <- subset(postTotal.significant, postTotal.significant[,idx.chr] == chr.i)
     
     postTotal.significant.i["promoter_5kb"] <- "no"
     postTotal.significant.i["promoter_1kb"] <- "no"
@@ -40,7 +43,7 @@ add_genomic_location <- function(postTotal.significant,
     postTotal.significant.i["distance_to_gene"] <- NA
     
     
-    df.gff.i <- subset(df.gene_annotation, df.gene_annotation$chr == i)
+    df.gff.i <- subset(df.gene_annotation, df.gene_annotation$chr == chr.i)
     
     l.df.gff.i <- vector(mode = "list", length = length(v.genePartitions))
     l.df.gff.i[[1]] <- subset(df.gff.i, df.gff.i$partition %in% v.genePartitions[1])
@@ -67,7 +70,6 @@ add_genomic_location <- function(postTotal.significant,
         postTotal.significant.i$gene[j] <- "yes"
         postTotal.significant.i$gene.ID[j] <- l.df.gff.i[[1]]$gene.ID[i.set[1]]
         postTotal.significant.i$strand[j] <- l.df.gff.i[[1]]$strand[i.set[1]]
-        
         
         postTotal.significant.i$distance_to_gene[j] <- 0
         

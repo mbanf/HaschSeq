@@ -5,10 +5,7 @@ sample_nonsignificant_background_snps_in_peaks <- function(l.postTotal, seed.ran
   
   message("sampling non significant background snps in peaks")
   # independent of peak and linkage 
-  
-  #n.total <- nrow(l.postTotal[[1]]) * n.bgSnp.multiplier
-  # l.postTotal[[2]] <- c() # data.frame(contig = character(), position = numeric())
-  
+
   for(i in 1:n.chromosomes){
     
     if(TRUE){

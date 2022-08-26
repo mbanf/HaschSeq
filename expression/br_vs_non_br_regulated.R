@@ -2,7 +2,7 @@
 br_vs_non_br_regulated <- function(){
   
   
-  df.ZM_Ath_overlaps <- read.csv("datasets_paper/ZmvsAth_1_to_1.csv")
+  df.ZM_Ath_overlaps <- read.table("data/arabidopsis_overlap_genelists/ZmvsAth_1_to_1.txt")
   df.ZM_Ath_overlaps["p.val"] <- 1
   df.ZM_Ath_overlaps["fc"] <- 0
   

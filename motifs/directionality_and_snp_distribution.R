@@ -1,4 +1,4 @@
-directionality_and_snp_distribution <- function(l.motif_analysis.postprocessed){
+directionality_and_snp_distribution <- function(l.motif_analysis.postprocessed, folder_tmp = "/tmp"){
   
   message("figure 2 - directionality of ASB")
 

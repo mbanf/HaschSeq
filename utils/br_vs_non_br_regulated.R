@@ -1,8 +1,9 @@
 
-br_vs_non_br_regulated <- function(){
+br_vs_non_br_regulated <- function(filename = "data/arabidopsis_overlap_genelists/ZmvsAth_1_to_1.txt",
+                                   folder_tmp ="tmp/"){
   
   
-  df.ZM_Ath_overlaps <- read.csv("../data/arabidopsis_overlap_genelists/ZmvsAth_1_to_1_corrected_12084.csv")
+  df.ZM_Ath_overlaps <- read.table(filename, stringsAsFactors = F, fill = T, header = T)
   df.ZM_Ath_overlaps["p.val"] <- 1
   df.ZM_Ath_overlaps["fc"] <- 0
   
@@ -25,9 +26,8 @@ br_vs_non_br_regulated <- function(){
     df.ZM_Ath_overlaps$p.val[i] <- pval
     
   }
-  
-  ###
-  write.csv(df.ZM_Ath_overlaps, "df.ZM_Ath_overlaps.csv")
+
+  write.csv(paste(folder_tmp, df.ZM_Ath_overlaps, "df.ZM_Ath_overlaps.csv", sep ="/"))
   
   ####
   
@@ -45,7 +45,78 @@ br_vs_non_br_regulated <- function(){
   library(pheatmap)
   p <- pheatmap((m.heatmap.fc), cluster_rows = FALSE,cluster_cols = FALSE, labels_row = NULL, labels_col = NULL)
   
+}
+
+
+
+arabidopsis_chipseq_venn_overlap <- function(df.ChipSeq.gene_partitioning){
+  
+  message("paper only - overlap analysis")
+  
+  library(VennDiagram)
+  
+  df.At_BZR1_ChipSeqTargets <- read.table("data/ArabidopsisScriptsAndDatasets/At_BZR1_ChipSeqTargets.txt", header = TRUE, sep ="\t", quote = "", stringsAsFactors = FALSE)
+  names(df.At_BZR1_ChipSeqTargets) <- "locus"
+  
+  # ath chIP chip - light
+  df.At_BZR1_ChIPchipTargets <- read.table("data/ArabidopsisScriptsAndDatasets/At_BZR1_ChIPchip.txt", header = TRUE, sep ="\t", quote = "", stringsAsFactors = FALSE)
+  
+  df.ChipSeq.gene_partitioning.subset <- subset(df.ChipSeq.gene_partitioning, !is.na(df.ChipSeq.gene_partitioning$Arabidopsis_ortholog))
+  df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog <- gsub("\\..*","", df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)
+  
+  ######## 
+  
+  a1 <- length(unique(df.At_BZR1_ChIPchipTargets$locus))
+  a2 <- length(unique(df.At_BZR1_ChipSeqTargets$locus))
+  a3 <- length(unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)) 
+  
+  a12 <- length(intersect(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.At_BZR1_ChipSeqTargets$locus)))
+  a23 <- length(intersect(unique(df.At_BZR1_ChipSeqTargets$locus), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)))
+  a13 <- length(intersect(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)))
+  a123 <- length(intersect(intersect(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.At_BZR1_ChipSeqTargets$locus)), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)))
+  
+  
+  lst.sets <- vector(mode = "list", length = 7)
+  lst.sets[[1]] <- intersect(intersect(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.At_BZR1_ChipSeqTargets$locus)), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog))
+  
+  lst.sets[[2]] <- intersect(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.At_BZR1_ChipSeqTargets$locus)) 
+  lst.sets[[3]] <- intersect(unique(df.At_BZR1_ChipSeqTargets$locus), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog))
+  lst.sets[[4]] <- intersect(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog))
+  lst.sets[[2]] <- lst.sets[[2]][!lst.sets[[2]] %in% lst.sets[[1]]]
+  lst.sets[[3]] <- lst.sets[[3]][!lst.sets[[3]] %in% lst.sets[[1]]]
+  lst.sets[[4]] <- lst.sets[[4]][!lst.sets[[4]] %in% lst.sets[[1]]]
+  
+  lst.sets[[5]] <- unique(df.At_BZR1_ChIPchipTargets$locus)
+  lst.sets[[6]] <- unique(df.At_BZR1_ChipSeqTargets$locus)
+  lst.sets[[7]] <- unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog)
+  
+  lst.sets[[5]] <- lst.sets[[5]][!lst.sets[[5]] %in% c(unique(df.At_BZR1_ChipSeqTargets$locus), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog))]
+  lst.sets[[6]] <- lst.sets[[6]][!lst.sets[[6]] %in% c(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.ChipSeq.gene_partitioning.subset$Arabidopsis_ortholog))]
+  lst.sets[[7]] <- lst.sets[[7]][!lst.sets[[7]] %in% c(unique(df.At_BZR1_ChIPchipTargets$locus), unique(df.At_BZR1_ChipSeqTargets$locus))]
+  
+  names(lst.sets) <- c("a123_466", "a12_1038","a23_525","a13_420", "a1_1487","a2_2272","a3_2784")
+  
+  
+  # write genes 
+  a123_466 <- lst.sets[[1]]
+  a12_1038 <- lst.sets[[2]]
+  a23_525 <- lst.sets[[3]]
+  a13_420 <- lst.sets[[4]]
+  a1_1487 <- lst.sets[[5]]
+  a2_2272 <- lst.sets[[6]]
+  a3_2784 <- lst.sets[[7]]
+  
+  # library(xlsx)
+  # save.xlsx("GeneSets.xlsx", a123_466, a12_1038, a23_525, a13_420, a1_1487, a2_2272, a3_2784)
+  
+  
+  ## remark: do venn diagramm
+  grid.newpage()
+  draw.triple.venn(area1 = a1, area2 = a2, area3 = a3, n12 = a12, n23 = a23, n13 = a13, cex = 1.5,  col = 1, cat.cex = 1.5, SetNames=c( "A", "B","A", "B","A", "B","A"),
+                   n123 = a123, category = c("AtBZR1 ChipChip", "AtBZR1 ChipSeq", "ZmBZR1 Seq"), lty = 1, 
+                   fill = c("blue", "red", "green"))
   
   
 }
+
 

@@ -4,6 +4,8 @@ folder_output = "output_test"
 folder_tmp = "tmp_test"
 folder_data = "data"
 
+# TODO: wichtig - code figures etc. bezug auf current state article !!!! (get pdf)
+
 # TODO: define an input SNP dataset 
 
 b.write_paper = FALSE
@@ -62,6 +64,7 @@ message("--- Hasch-seq data analysis ---")
 # AGPv4 genome (R v.3.3.2), 
 if(b.firstRun){
   source("utils/mutant_genome.R")
+  create_mutant_genome_from_vcf()
 }else{
   df.snp_positions <- read.table(paste(folder_data,"df.snp_positions.csv", sep = "/"),  sep ="\t")
   l.genome.mutant <- readRDS(paste(folder_tmp,"genome_mutant.rds", sep = "/"))
@@ -115,9 +118,11 @@ hist(l.postTotal[[1]]$POSTfreq, breaks = 100, main = "Allelic bias of bQTL", xla
 
 
 
+
+message("loading binding peak datasets...")
 # To focus on ASBs (Allele-specific ZmBZR1 binding) with potential biological relevance, we further restricted ASBs to those
 # located in highconfidence BZR1-binding peaks reproducible in all 6 biological replicates
-message("loading binding peak datasets...")
+
 if(!b.load_filtered_binding_peaks){
   source("utils/binding_peaks.R") # TODO: DEFINE AND EXPLAIN THE FUNCTION - how to get to final peaks
 }else{
@@ -317,12 +322,14 @@ write.csv(df.partitions, paste("output/df.partition_plus_", timeStamp, ".csv", s
 
 
 
+
+message("Control background SNP (bgSNP) sampling")
 # Functional GWAS variants have been shown to be significantly enriched in gene proximal
 # regions. Therefore, control background SNPs (bgSNPs) were proportionally sampled (excluding ASBs) 
 # per chromosome and genomic location (i.e. 5 - 1kb upstream, 1kb upstream - TSS, 5’UTR, exon, intron, 3’UTR, TTS - 1 kb downstream, intergenic) to match
 # the genomic distribution of the ASBs dataset. Additionally, we checked that ASBs and bgSNPs showed a similar minor allele-frequency . In total,
 # 168950 bgSNPs were sampled, yielding approximately 50 times as many background SNPs per genome location, compared to the number of ASBs within each location
-message("Control background SNP (bgSNP) sampling")
+
 if(!b.load_snp_to_gene_partitioning_and_background_sampling){
   
   source("utils/HashSeq_populationSampling.R")
@@ -389,13 +396,15 @@ message(nrow(l.bQTL_gene_partitioning[[2]]), " bgSNPs have been sampled")
 message("Genomic feature profiling of ASBs (Methylation, Motifs and DNAseI, Enhancers) ")
 
 
+
+message("------------ Methylation ---------")
 # Methylation levels for CG, CHG, and CHH for B73 and Mo17 were extracted from Regulski et al. 2013
 # Methylation frequency versus distance (up to +/- 2 kbp) around
 # each ASB were averaged over 20bp bins, and visualized by regions bound by BZR1 with
 # either high or low affinity levels depending on the inbred line. For B73, high and low
 # affinity bound regions were defined by a post frequency of >= 0.85 or <= 0.15, respectively
 # and oppositely for Mo17 by a post frequency <= 0.15 and >= 0.85), respectively.
-message("------------ Methylation ---------")
+
 source("utils/methylation.R")
 # asb_distance_vs_methylation(df.ASBs)
 
@@ -403,45 +412,155 @@ source("utils/methylation.R")
 # df.ASBs # readRDS(paste("tmp/l.bQTL_gene_partitioning_withGeneDistances_backgroundSampled_", timeStamp, ".rds", sep = ""))[[1]]
 
 
-
-
-v.filenames = c(paste(folder_data,"methylation/B73_CHG.bw", sep = "/"),
-                paste(folder_data,"methylation/B73_CHH.bw", sep = "/"),
-                paste(folder_data,"methylation/B73_CpG.bw", sep = "/"),
-                paste(folder_data,"methylation/MO17_CHG.bw", sep = "/"),
-                paste(folder_data,"methylation/MO17_CHH.bw", sep = "/"),
-                paste(folder_data,"methylation/MO17_CpG.bw", sep = "/"))
-
-v.datasets = c("B73_CHG", "B73_CHH", "B73_CpG", "MO17_CHG", "MO17_CHH", "MO17_CpG")
-v.formats = c("bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig")
-
-
-asb_distance_vs_methylation(df.ASBs, 
-                            th.distance_to_ASB = 2000,
-                            n.chromosomes = 10,
-                            n.cpus = 4,
-                            v.binWidth = c(20,40,60,75,100),
-                            b.val = TRUE,
-                            v.species = c("Mo17", "B73"),
-                            v.groups = c("all", "genic", "non_genic"),
-                            v.species = c("Mo17", "Mo17" , "B73", "B73"),
-                            v.stringency <- c("< 0.5 | > 0.5", "< 0.15 | > 0.85", "< 0.5 | > 0.5", "< 0.15 | > 0.85"),
-                            v.filenames = v.filenames,
-                            v.datasets = v.datasets,
-                            v.formats = v.formats,
-                            folder_tmp = folder_tmp,
-                            folder_output = folder_output,
-                            do.plot = F)
+# To identify ASBs which overlapped with significant variation in either CG, CHG, or CHH
+# methylation between B73 and Mo17, we first, per ASB, assigned averaged methylation
+# levels of Mo17 and B73 methylation levels (separately for the CG, CHG, or CHH
+#  methylation datasets) within a given window of +/- 40 bp around the ASB position.
+# Differentially methylated alleles were defined as described previously 13 . Accordingly, we
+# identified ASBs as overlapping with differentially methylated regions if in the B73 or Mo17
+# methylation datasets, the methylation level of one allele would be >= 70% while the level
+# of the corresponding allele was <= 10%.
 
 
 
+
+
+# TODO: create subdirectories for plots !!!
+methylation_occupancy(l.bQTL_gene_partitioning, 
+                      th.distance_to_ASB = 2000,
+                      n.chromosomes = 10,
+                      n.cpus = 4,
+                      n.binWidth = 20,
+                      b.val = TRUE,
+                      v.species = c("Mo17", "B73"),
+                      v.groups = c("all", "genic", "non_genic"),
+                      v.species = c("Mo17", "Mo17" , "B73", "B73"),
+                      v.stringency <- c("< 0.5 | > 0.5", "< 0.15 | > 0.85", "< 0.5 | > 0.5", "< 0.15 | > 0.85"),
+                      v.filenames = c(paste(folder_data,"methylation/B73_CHG.bw", sep = "/"),
+                                      paste(folder_data,"methylation/B73_CHH.bw", sep = "/"),
+                                      paste(folder_data,"methylation/B73_CpG.bw", sep = "/"),
+                                      paste(folder_data,"methylation/MO17_CHG.bw", sep = "/"),
+                                      paste(folder_data,"methylation/MO17_CHH.bw", sep = "/"),
+                                      paste(folder_data,"methylation/MO17_CpG.bw", sep = "/")),
+                      v.datasets = c("B73_CHG", "B73_CHH", "B73_CpG", "MO17_CHG", "MO17_CHH", "MO17_CpG"),
+                      v.formats = c("bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig"),
+                      folder_tmp = folder_tmp,
+                      folder_output = folder_output,
+                      do.plot = F)
+
+
+# rename methylation, open chromatin?
+l.SNPs_w_chromatin <- RDS(paste(folder_tmp, "l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds", sep = "/"))
+
+# Fig. 4 l) Correlation of CG methylation with allele-specific BZR1 binding. Average
+# CG methylation of the B73 - Mo17 allele of the 40bp surrounding each ASB are plotted against
+# the allelic bias (expressed in percentage of B73 read counts). Differential CG methylation is
+# indicated by red dots.
+differential_methylation_vs_allelic_bias(l.SNPs=l.bQTL_gene_partitioning,
+                                        th.bp_offset = 20,
+                                        th.distance_to_ASB = 2000,
+                                        n.chromosomes = 10,
+                                        n.cpus = 1,
+                                        b.val = TRUE,
+                                        v.species = c("Mo17", "B73"),
+                                        degrees = 15,
+                                        th.distance_to_ASB = 5000,
+                                        th.padding = 50,
+                                        width = 6,
+                                        height = 4,
+                                        group = "genic_and_nongenic",
+                                        v.filenames = c("data/dnase/GSE94291_DNase_ist.bedGraph", 
+                                                        "data/methylation/B73_CpG.bw", 
+                                                        "data/methylation/MO17_CpG.bw",
+                                                        "data/methylation/B73_CHG.bw",
+                                                        "data/methylation/MO17_CHG.bw",
+                                                        "data/methylation/B73_CHH.bw",
+                                                        "data/methylation/MO17_CHH.bw"),
+                                        v.datasets = c("DNase", "B73_CpG",  "MO17_CpG", "B73_CHG", "MO17_CHG", "B73_CHH", "MO17_CHH"),
+                                        v.formats = c("bedGraph", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig"),
+                                        v.has_ranges = c("yes",  "no", "no",  "no", "no",  "no", "no")
+)
+
+
+# TODO: get absolute and differential figure ... 
+
+
+l.SNPs_w_chromatin <- readRDS(paste(folder_tmp, "l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds", sep = "/"))
+
+
+df.ASBs
+
+
+
+l.SNPs=l.bQTL_gene_partitioning
+th.bp_offset = 20
+th.distance_to_ASB = 2000
+n.chromosomes = 10
+n.cpus = 1
+b.val = TRUE
+v.species = c("Mo17", "B73")
+degrees = 15
+th.distance_to_ASB = 5000
+th.padding = 50
+width = 6
+height = 4
+group = "genic_and_nongenic"
+v.filenames = c("data/dnase/GSE94291_DNase_ist.bedGraph", 
+                "data/methylation/B73_CpG.bw", 
+                "data/methylation/MO17_CpG.bw",
+                "data/methylation/B73_CHG.bw",
+                "data/methylation/MO17_CHG.bw",
+                "data/methylation/B73_CHH.bw",
+                "data/methylation/MO17_CHH.bw")
+v.datasets = c("DNase", "B73_CpG",  "MO17_CpG", "B73_CHG", "MO17_CHG", "B73_CHH", "MO17_CHH")
+v.formats = c("bedGraph", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig")
+v.has_ranges = c("yes",  "no", "no",  "no", "no",  "no", "no")
+
+
+# 
+# Fig. 2. Variation in DNA sequence and methylation underlie differential BZR1 binding. a)
+# Schematics of HASCh-seq approach and possible causes for allele-specific binding events.
+# Chromatin-IP is performed in F1 hybrid plants. From top to bottom, three possible scenarios for
+# TF binding to the parental genomes (green and blue) are depicted, where binding strength is
+# represented by the line width of the black arrows: when no alterations in motif and chromatin
+# structure occurs, binding is expected to be equal. Lower binding is expected If the binding motif
+# is altered by a SNP or epigenetic features like DNA methylation for one of the alleles. b) An
+# example of allele-specific binding of ZmBZR1 to target gene Zm00001d031434. BZR1 bound
+# target reads that uniquely map to either B73 (green) or Mo17 (blue) are shown. c) Allelic and
+# spatial distribution of allele-specific BZR1 binding sites with significant bias towards B73 (green)
+# or Mo17 (blue) along the maize B73 reference genome. Allelic bias is expressed as percentage
+# of B73 read counts. Chromosome borders and length are depicted by dashed lines and arrows at
+# the bottom, respectively. Centromere locations are indicated by orange rectangles. A red box on
+# 26chromosome 1 marks the ASB upstream of Zm00001d031434 displayed in Fig. 2b. d) Genomic
+# distribution of ASBs. 3297 ASBs were classified according to their location relative to genes. In
+# case of two genes in the proximity of an ASB, the priority given was exon>intron>UTR>1 kb
+# upstream>1 kb downstream>1-5 kb upstream. e) Frequency of BRRE (CGTG[C/T]G), G-Box
+# (CACGTG), and the control motif GTACGG (SBP-box 12 ) around ASBs of the alleles with higher
+# BZR1 binding. f) Fraction of ASBs overlapping with motifs, for which the allele with canonical
+# BRRE, G-Box or a control motif GCCGCC (GCC-box 12 ), showed higher ZmBZR1 affinity. Both
+# BR-related BRRE and G-box motifs, but not the control motif, diverge significantly (p<0.001,
+# Fisher’s exact test) from the expected 50% random distribution. g) Distribution of lead SNPs of
+# ASBs within motifs. Among ASBs which overlapped with BRRE motif, SNPs were enriched in the
+# core CG bases. h) ASBs affecting BZR1 motifs and/or overlapping with differentially methylated
+# (CpG, CHG or CHH) sites between B73 and Mo17. i)-k) Average CpG (h), CHG (i) and CHH(j)
+# methylation frequency in B73 (green) and Mo17 (blue) over ASB loci with a least 85% binding
+# bias towards B73 or Mo17. High affinity ( ___ ) and low affinity ( …. ) alleles are considered separately
+# for each genotype. l) Correlation of CG methylation with allele-specific BZR1 binding. Average
+# CG methylation of the B73 - Mo17 allele of the 40bp surrounding each ASB are plotted against
+# the allelic bias (expressed in percentage of B73 read counts). Differential CG methylation is
+# indicated by red dots.
+
+
+
+
+message("------------ Motifs ---------")
 # To identify ASBs which may be explained by motif variation (Fig. 2h), we extracted the
 # +/- 5 bp of the high affinity BZR1 bound allele surrounding ASBs. Using R we scanned
 # those 11 bp fragments for canonical BRRE (CGTG[T/C]G, C[G/A]CACG), allowing a
 # single base pair mismatch outside the core motif (CGTG), or G-box (CACGTG) motifs
 # and determined ASBs where the SNP changed a BRRE or G-box motif into an altered
 # (non BRRE or G-box) motif. 
-message("------------ Motifs ---------")
+
 if(!b.load_motif_analysis){
   source("motifs/predefined_motif_analysis.R")
   predefined_motif_analysis(l.bQTL_gene_partitioning, df.peaks, motifs, v.motif_offset)
@@ -491,6 +610,7 @@ if(b.write_paper){
 }
 
 
+
 message("------------ Enhancers ---------")
 # In addition to cis-regulatory elements located in the close vicinity to the transcriptin
 # start site (TSS) or transcription termination site (TTS), transcriptional enhancers can be
@@ -506,10 +626,53 @@ message("------------ Enhancers ---------")
 
 source("utils/enhancer.R")
 
+n.maxDist = 100000 # TODO: discuss - currently 100000 not 10000 chosen  
+
+res<- snp_to_enhancer_distance(l.bQTL_gene_partitioning,
+                              df.enhancer_genes,
+                              v.sets = c("ASB", "bgSNP"),
+                              n.binWidth = 10,
+                              n.maxDist = n.maxDist)
+
+# Fig. 4. a) ASBs of ZmBZR1 are overrepresented at enhancer sites as compared to randomly selected background (bg) SNPs
+if(b.write_paper){
+  pdf(paste(folder_output, paste("enhancer/ASBs_of_ZmBZR1_overrepresented_at_enhancer_sites.pdf", sep = ""), sep ="/"), width = 6, height = 4)
+  print(res$p.dist_density)
+  dev.off()
+}
+
+message("RNA extraction, RNA sequencing and differential expression analysis")
+# BR deficient brd1 mutant siblings were grown in soil under greenhouse conditions for 26
+# days as described above. The oldest 2 leaves were removed and 2 cm of meristem
+# enriched tissue (Supplementary Fig. 1) were placed in 1 µM BL for 4 h at room
+# temperature (RT) in water. Total RNA was isolated using acidic phenol extraction as
+# described previously10. Purification of poly-adenylated mRNA using oligo(dT) beads,
+# construction of barcoded libraries, and sequencing using Illumina HiSeq 4500 technology
+# (75 bp paired-end reads) were performed by Novogene Co. using manufacturer's Illumina
+# recommendations. Trimmed and QC (Seqpurge v. 2019-02-11) filtered sequence reads
+# were mapped to the B73 AGPv4 genome using STAR (v. 2.54)11 in twopass mode (with
+# parameters: --outFilterScoreMinOverLread 0.3, --outFilterMatchNminOverLread 0.3, --
+# outSAMstrandField intronMotif, --outFilterType BySJout, --outFilterIntronMotifs
+# RemoveNoncanonical, --quantMode TranscriptomeSAM GeneCounts). Unique reads
+# were filtered by mapping quality (q20) and PCR duplicates removed using Samtools (v.
+# 1.3.1). Gene expression was analyzed in R (v. 3.4.1) using the DEseq2 software (v.
+# 1.16.1)12. Genes were defined as differentially expressed by a 1.5-fold expression
+# difference with a p value, adjusted for multiple testing, of < 0.05. Accession number for
+# the RNA-seq data in the Gene Expression Omnibus database will be available upon
+# paper acceptance. For the analysis of allele-specific gene regulation a previously
+# published RNA-seq data set from B73xMo17 F1 hybrids was used (Baldauf et al., 2016).
+source("expression/get_brassinolide_treatment_rnaseq_data.R")
+df.bQTL_RNAseq <- get_brassinolide_treatment_rnaseq_data(path.rnaseq.down_regulated, path.rnaseq.up_regulated)
+message(nrow(df.bQTL_RNAseq), " BR-responsive genes ( repressed ", table(df.bQTL_RNAseq$mode)[1]," , activated ", table(df.bQTL_RNAseq$mode)[2], " )")
+if(b.write_paper){
+  write.table(df.bQTL_RNAseq, paste(folder_output, "/S1.txt", sep = ""), quote = FALSE, row.names = FALSE, sep = "\t")
+}
 
 
 
 
+
+message("-------------- ChIP-seq ------------- ")
 # Quality filtered ChIP-seq reads were aligned to the B73 AGPv4 genome using bwa-mem (v. 0.7.16a)
 # with default parameters, followed by removal of PCR duplicates using samtools (v. 1.3.1.). 
 # To determine BZR1 binding peaks, IP and negative control samples,
@@ -518,7 +681,7 @@ source("utils/enhancer.R")
 # peaks reproducible in all 3 replicas, using a 400 bp window (+/- 200 bp around each peak)
 # were determined using R (v. 3.3.2) and considered high confidence peaks. 
 # Our Chip-seq experiment identified 17463 high confidence ZmBZR1 binding peaks
-message("-------------- ChIP-seq ------------- ")
+
 if(!b.load_chip_analysis){
   source("utils/chipseq_binding_peaks.R")
   chipseq_binding_peaks(l.path.ChipSeqB73, s.half_window_size.input, n.chromosomes)
@@ -552,19 +715,14 @@ message(nrow(df.ChipSeq.filtered), " high confidence ZmBZR1 ChiP-seq binding pea
 
 
 if(!b.load_chip_analysis){
-  # gene expression and orthologs
-  
-  source("expression/get_brassinolide_treatment_rnaseq_data.R")
-  df.bQTL_RNAseq <- get_brassinolide_treatment_rnaseq_data(path.rnaseq.down_regulated, path.rnaseq.up_regulated)
-  
+
   # The ZmBZR1 ChIP-seq peaks located near 6371 putative target genes, which included (according to the RNA-seq analysis) 
   # 580 and 469 BR activated and repressed genes, respectively
   df.bQTL_gene_partitioning <- merge(df.ChipSeq_gene_partitioning, df.bQTL_RNAseq, by = "gene.ID")
   df.bQTL_gene_partitioning <- subset(df.bQTL_gene_partitioning, df.bQTL_gene_partitioning$mode %in% c("up", "down"))
   df.gene_set <- unique(df.bQTL_gene_partitioning[, c("gene.ID", "mode")])
   message(nrow(df.gene_set), " BR-responsive putative target genes of ZmBZR1 ( repressed ", table(df.gene_set$mode)[1]," , activated ", table(df.gene_set$mode)[2], " )")
-  
-  # Arabidopsis annotated orthologs
+
   source("utils/gene_features.R")
   df.ChipSeq_gene_partitioning <- add_gene_features(df.ChipSeq_gene_partitioning,
                                                     df.gene_function,
@@ -577,7 +735,6 @@ if(!b.load_chip_analysis){
   df.ChipSeq_gene_partitioning = subset(df.ChipSeq_gene_partitioning, df.ChipSeq_gene_partitioning$non_genic == "no")
   message(length(unique(df.ChipSeq_gene_partitioning$gene.ID)), " BR-responsive putative target genes of ZmBZR1 with ", length(unique(df.ChipSeq_gene_partitioning$Arabidopsis_ortholog)), " Arabidopsis orthologs" )
   
-
 }else{
   
   
@@ -593,21 +750,15 @@ if(b.write_paper){
 }
 
 
+source("utils/br_vs_non_br_regulated.R")
+arabidopsis_chipseq_venn_overlap(df.ChipSeq_gene_partitioning)
+
 
 
 # TODO: check data online 
 
 
-message("Gene expression and orthologs")
-
-df.bQTL_RNAseq <- get_brassinolide_treatment_rnaseq_data(path.rnaseq.down_regulated, path.rnaseq.up_regulated, path.rnaseq.ATBES1_targets)
-message(nrow(df.bQTL_RNAseq), " BR-responsive genes ( repressed ", table(df.bQTL_RNAseq$mode)[1]," , activated ", table(df.bQTL_RNAseq$mode)[2], " )")
-if(b.write_paper){
-  write.table(df.bQTL_RNAseq, paste(folder_output, "/S1.txt", sep = ""), quote = FALSE, row.names = FALSE, sep = "\t")
-}
-
-
-
+message("-------------- Arabidopsis ortholog comparative analysis ------------- ")
 
 source("utils/gene_features.R")
 df.ASB_gene_partitioning <- add_gene_features(df.ASB_gene_partitioning,
@@ -621,18 +772,29 @@ df.ASB_gene_partitioning$Arabidopsis_ortholog <- gsub("\\..*","", df.ASB_gene_pa
 df.ASB_gene_partitioning = subset(df.ASB_gene_partitioning, df.ASB_gene_partitioning$non_genic == "no")
 
 
+# BR vs non BR regulation s
+source("utils/br_vs_non_br_regulated.R")
+br_vs_non_br_regulated(filename = "data/arabidopsis_overlap_genelists/ZmvsAth_1_to_1.txt")
+
+
+
+
+# not identical to figure 1 h (check different variations)
+bQTL_on_ArabidopsisHomolog_geneexpression_evaluation <- function(df.bQTL_RNAseq, 
+                                                                 path.gene_orthologs = "data/GeneAnnotation/Phytozome13_anno_1_1.txt")
+
 
 
 # TODO: where are these datasets
 # ath chip seq - dark
-df.At_BZR1_ChipSeqTargets <- read.table("data/ArabidopsisScriptsAndDatasets/At_BZR1_ChipSeqTargets.txt", header = TRUE, sep ="\t", quote = "", stringsAsFactors = FALSE)
-names(df.At_BZR1_ChipSeqTargets) <- "locus"
-
-# ath chIP chip - light
-df.At_BZR1_ChIPchipTargets <- read.table("data/ArabidopsisScriptsAndDatasets/At_BZR1_ChIPchip.txt", header = TRUE, sep ="\t", quote = "", stringsAsFactors = FALSE)
-
-length(intersect(df.ASB_gene_partitioning$Arabidopsis_ortholog, df.At_BZR1_ChipSeqTargets$locus))
-length(intersect(df.ASB_gene_partitioning$Arabidopsis_ortholog, df.At_BZR1_ChIPchipTargets$locus))
+# df.At_BZR1_ChipSeqTargets <- read.table("data/ArabidopsisScriptsAndDatasets/At_BZR1_ChipSeqTargets.txt", header = TRUE, sep ="\t", quote = "", stringsAsFactors = FALSE)
+# names(df.At_BZR1_ChipSeqTargets) <- "locus"
+# 
+# # ath chIP chip - light
+# df.At_BZR1_ChIPchipTargets <- read.table("data/ArabidopsisScriptsAndDatasets/At_BZR1_ChIPchip.txt", header = TRUE, sep ="\t", quote = "", stringsAsFactors = FALSE)
+# 
+# length(intersect(df.ASB_gene_partitioning$Arabidopsis_ortholog, df.At_BZR1_ChipSeqTargets$locus))
+# length(intersect(df.ASB_gene_partitioning$Arabidopsis_ortholog, df.At_BZR1_ChIPchipTargets$locus))
 
 df.bQTL_RNAseq
 
@@ -663,29 +825,23 @@ length(unique(df.bQTL_gene_partitioning.subset$Arabidopsis_ortholog))
 
 
 
+message("-------------- GWAS ------------- ")
 
 
 
 
-message("RNA extraction, RNA sequencing and differential expression analysis")
-# BR deficient brd1 mutant siblings were grown in soil under greenhouse conditions for 26
-# days as described above. The oldest 2 leaves were removed and 2 cm of meristem
-# enriched tissue (Supplementary Fig. 1) were placed in 1 µM BL for 4 h at room
-# temperature (RT) in water. Total RNA was isolated using acidic phenol extraction as
-# described previously10. Purification of poly-adenylated mRNA using oligo(dT) beads,
-# construction of barcoded libraries, and sequencing using Illumina HiSeq 4500 technology
-# (75 bp paired-end reads) were performed by Novogene Co. using manufacturer's Illumina
-# recommendations. Trimmed and QC (Seqpurge v. 2019-02-11) filtered sequence reads
-# were mapped to the B73 AGPv4 genome using STAR (v. 2.54)11 in twopass mode (with
-# parameters: --outFilterScoreMinOverLread 0.3, --outFilterMatchNminOverLread 0.3, --
-# outSAMstrandField intronMotif, --outFilterType BySJout, --outFilterIntronMotifs
-# RemoveNoncanonical, --quantMode TranscriptomeSAM GeneCounts). Unique reads
-# were filtered by mapping quality (q20) and PCR duplicates removed using Samtools (v.
-# 1.3.1). Gene expression was analyzed in R (v. 3.4.1) using the DEseq2 software (v.
-# 1.16.1)12. Genes were defined as differentially expressed by a 1.5-fold expression
-# difference with a p value, adjusted for multiple testing, of < 0.05. Accession number for
-# the RNA-seq data in the Gene Expression Omnibus database will be available upon
-# paper acceptance. For the analysis of allele-specific gene regulation a previously
-# published RNA-seq data set from B73xMo17 F1 hybrids was used (Baldauf et al., 2016).
+
+# Fig. 4. ASBs of ZmBZR1 are linked to growth and disease related traits. 
+# b) Association of ASBs with the curated 4041 significant GWAS hits for selected phenotypes of
+# the NAM population. Abbreviations: Av: Average; intern: internode; len: length; w. pl.: whole plant;
+# b.: below c) VCAP Variance component analysis results. Variance explained (h2) by the ASB-
+#   SNP set (bars) and background SNP set (violin plots, derived from the permutation results).
+# 29Orange color in the bars denotes a significantly higher variance explained (h2) by ASBs than
+# expected by chance (one-sided permutation test < 0.1).
+
+
+source("gwas/gwas_enrichment.R")
+gwas_enrichment(l.bQTL_gene_partitioning, df.phenotype_gwas, output_file, s.dist_ASB_to_GWAS=2000)
+
 
 

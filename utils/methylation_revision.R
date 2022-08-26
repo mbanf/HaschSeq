@@ -212,7 +212,7 @@ methylation_occupancy_distance_to_asb  = function(df.ASBs,
     }
     names(df.methylation) <- c("chr",  "start", "val")
     df.methylation <- subset(df.methylation, df.methylation$chr %in% chrs)
-    df.methylation = subset(df.methylation, df.methylation$val > 0) 
+    #df.methylation = subset(df.methylation, df.methylation$val > 0) 
     gc()
     
     message("Checking ", nrow(df.methylation), " entries of methylation for ", nrow(df.ASBs), " ASBs")
@@ -435,7 +435,7 @@ methylation_occupancy = function(df.ASBs,
     }
     names(df.methylation) <- c("chr",  "start", "val")
     df.methylation <- subset(df.methylation, df.methylation$chr %in% chrs)
-    df.methylation = subset(df.methylation, df.methylation$val > 0) 
+    # df.methylation = subset(df.methylation, df.methylation$val > 0) 
     gc()
     
     message("Checking ", nrow(df.methylation), " entries of methylation for ", nrow(df.ASBs), " ASBs")

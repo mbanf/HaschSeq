@@ -1,7 +1,7 @@
 # HaschSeq
 
 
-Background
+# Background
 
 Variation in transcriptional regulation is a major cause of phenotypic diversity1
 . Genomewide association studies (GWAS) have shown that most functional variants reside in
@@ -19,6 +19,15 @@ Comparison with GWAS data linked hundreds of ASB loci to important yield, growth
 disease-related traits. Our study provides a robust method for analyzing genome-wide
 variations of transcription factor occupancy and identified genetic and epigenetic
 variations of the BR response transcription network in maize.
+
+###
+
+Revision 
+
+old counts, new peaks and input - 7817 ASBs
+
+
+
 
 
 klaeren 
