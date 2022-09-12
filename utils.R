@@ -170,6 +170,22 @@ bQTL_scatterplot <- function(df.bQTLs, n.chromosomes = 10){
   p6
 }
 
+
+
+genomic_distribution <- function(df.ASBs, 
+                                 df.bgSNPs, 
+                                 v.partitions){
+  
+  df.distribution <- data.frame(ASBs = apply(df.ASBs[,v.partitions], 2, table)["yes",],
+                                bgSNPs = apply(df.bgSNPs[,v.partitions], 2, table)["yes",])
+  df.distribution["%ASBs"] <-  round(df.distribution$ASBs / sum(df.distribution$ASBs) * 100, 1)
+  df.distribution["%bgSNPs"] <-  round(df.distribution$bgSNPs / sum(df.distribution$bgSNPs) * 100, 1)
+  df.distribution["multiplier"] <- round(df.distribution$bgSNPs / df.distribution$ASBs, 1)
+  
+  print(df.distribution)
+  
+}
+
 # 
 # bQTL_scatterplot <- function(postTotal=postTotal){
 #   

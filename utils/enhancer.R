@@ -1,6 +1,6 @@
 # To determine potential enrichments, +/- 10 kbps surrounding enhancer regions were intersected with ASBs and bgSNPs.
 
-snp_to_enhancer_distance <- function(df.bQTLs, 
+get_to_enhancer_distance <- function(df.bQTLs, 
                                      df.enhancer,
                                      n.binWidth = 10,
                                      n.maxDist = 10000){
@@ -60,7 +60,7 @@ snp_to_enhancer_distance <- function(df.ASBs,
                                      path.enhancer,
                                      df.enhancer_genes,
                                      n.binWidth = 10,
-                                     n.maxDist = 100000 ){
+                                     n.maxDist = 10000){
   
   message("Identify ASB and bgSnps distance to enhancer regulation ")
   
@@ -70,8 +70,8 @@ snp_to_enhancer_distance <- function(df.ASBs,
   
   print(table(df.enhancer$chr))
 
-  res.ASBs.enhancer <- snp_to_enhancer_distance(df.ASBs, df.enhancer, n.binWidth, n.maxDist)
-  res.bgSNPs.enhancer <- snp_to_enhancer_distance(df.bgSNPs, df.enhancer, n.binWidth, n.maxDist)
+  res.ASBs.enhancer <- get_to_enhancer_distance(df.ASBs, df.enhancer, n.binWidth, n.maxDist)
+  res.bgSNPs.enhancer <- get_to_enhancer_distance(df.bgSNPs, df.enhancer, n.binWidth, n.maxDist)
   
   df.distPlot <- rbind(data.frame(bin = as.numeric(names(res.ASBs.enhancer$v.number_per_break)), val = res.ASBs.enhancer$v.number_per_break, set = "ASBs"), 
                        data.frame(bin = as.numeric(names(res.bgSNPs.enhancer$v.number_per_break)), val = res.bgSNPs.enhancer$v.number_per_break, set = "bgSNPs"))
@@ -82,7 +82,9 @@ snp_to_enhancer_distance <- function(df.ASBs,
   p.dist_density <- ggplot(df.distDensityPlot, aes(x=val, fill = set)) + geom_density(aes(group=set, colour=set), alpha = 0.2) + theme_bw() + scale_colour_manual(values = c("red", "black"))
   p.dist <- ggplot(df.distPlot, aes(x=bin, y=val,  fill = set, colour = set)) + stat_smooth(aes(x = bin, y = val), method = "lm",  formula = y ~ poly(x, 21), se = FALSE) + theme_bw() + scale_colour_manual(values = c("red", "black"))
   
-  return(list(p.dist_density=p.dist_density, p.dist=p.dist)) 
+  return(list(p.dist_density=p.dist_density, p.dist=p.dist, 
+              df.ASBs_w_enhancer_annotation = res.ASBs.enhancer$df.bQTLs_w_enhancer_annotation,
+              df.bgSNPs_w_enhancer_annotation = res.bgSNPs.enhancer$df.bQTLs_w_enhancer_annotation)) 
   
 }
 

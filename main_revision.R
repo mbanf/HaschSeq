@@ -41,12 +41,17 @@ path.peaks = "data/revision/BZR1_6.GEM_events.br.filtered.1_4_2_5_3_6.bed" # pre
 # v.paths.peaks.replicates = c(path.peaks, path.peaks, path.peaks, path.peaks, path.peaks, path.peaks)
 
 path.genomic_sequences = "data/revision/ref_B73Mo17.fasta"
+
+
 path.gene_annotation <- "data/revision/B73_Mo17_CSHL.gff"
+
 path.phenotypic_snps <- "data/revision/gwas/remapped_AGPv5_chr_uplifted_Wallace_etal_2014_PLoSGenet_GWAS_hits.bed"
 
 path.raw_input_reads <-"data/revision/INPUT.q255.RPGC.exScal.bin1.sm0.bw"
 #path.raw_input_reads <- "data/revision/BZR7_12.RPGCq255.b1.ct.bigwig" # old
 path.enhancer <- "data/revision/remapped_B73_enhancers_v5.bed"
+
+path.expression <- "data/revision/expression/Baldauf_2016_dataset.txt"
 
 #### START PEAK PREPROCESSING
 if(FALSE){
@@ -75,6 +80,7 @@ if(FALSE){
 #### END PEAK PREPROCESSING
 
 
+# TODO: put into separate function pre-processing !!!
 
 # The data is generated from BZR1 ChIP in all six replicates in B73xMo17, mapped to a diploid genome, i.e. the two parental genomes pasted together. 
 # Only unique mapping reads were kept, which means that only reads with sequence differences between the two inbred lines are mapped, 
@@ -145,23 +151,40 @@ df.bQTLs <- subset(df.bQTLs, df.bQTLs$POSTfreq < 1 & df.bQTLs$POSTfreq > 0)
 
 message(nrow(df.bQTLs), " bQTLs (significance p < ", th.p.bQTL, " )")
 hist(df.bQTLs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.bQTLs), "putative bQTLs (p < 0.001)"), xlab = "allelic bias", cex.main = 0.7)
-
+write.csv(df.bQTLs, "57414_bQTLs.csv", quote = F, row.names = F)
 
 
 message("Estimate significant bQTLs in binding peaks.")
 
 source("utils/binding_peaks_revision.R")
 
-# TODO: add legacy load version - for different format
-# TODO: teste und dann einmotten peak merge .. bzw. abgleich
 df.peaks <- load_peaks(path.peaks)  # original merged peak data (without replicated-specific filtering)
+
+if(FALSE){
+  # annotate genes to peaks
+  source("utils/genomic_location_revision.R")
+  
+  df.peaks.B73 <- subset(df.peaks, df.peaks$seqnames )
+  
+  df.peaks_genomic_location <- add_genomic_location(df.peaks, 
+                                                   chr = "seqnames",
+                                                   pos = "center",
+                                                   df.gene_annotation,
+                                                   n.cpus = 5)
+
+  write.csv(df.peaks_genomic_location, "52765_peaks_w_genomic_location_w_gene_association.csv", quote = F, row.names = F)
+
+}
+
+
+
 df.bQTLs <- bQTLs_in_peaks(df.bQTLs, df.peaks)
 
 message(nrow(df.bQTLs), " SNPs located within high-confidence BZR1 binding peaks (all 6 replicated merged)")
 hist(df.bQTLs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.bQTLs), "bQTL located within high-confidence BZR1 binding peaks"), 
      xlab = "allelic bias", cex.main = 0.7)
 
-#write.csv(df.bQTLs, "33267_bQTLs_in_peaks.csv", quote = F, row.names = F)
+write.csv(df.bQTLs, "33267_bQTLs_in_peaks.csv", quote = F, row.names = F)
 #write.table(write_bed(df.bQTLs), "33267_bQTLs_in_peaks.bed", row.names = F, col.names = F, quote = F, sep = "\t")
 
 
@@ -206,7 +229,6 @@ res <- identify_systematic_bias(df.ASBs,
                                 bQTL_only=F)
 
 #saveRDS(res, paste(folder_tmp, "res_7817_ASBs_w_bgSNPs.rds", sep = "/"))
-
 res <- readRDS(paste(folder_tmp, "res_7817_ASBs_w_bgSNPs.rds", sep = "/"))
 
 df.ASBs <- filter_systematic_bias(df.bQTLs = res$df.bQTLs,
@@ -231,14 +253,11 @@ writeXStringSet(asb_environment, "200_bp_environment_sequences_from_6143_ASBs_75
 
 message("perform gene partitioning")
 df.gene_annotation <- load_gene_annotation(path.gene_annotation)
-  
 
 
 source("utils/genomic_location_revision.R")
 df.ASBs_genomic_location = add_genomic_location_bQTLs(df.ASBs,  
                                                       df.gene_annotation,
-                                                      v.gene_partitions = c("gene", "five_prime_UTR",  "CDS", "three_prime_UTR", "exon"),
-                                                      n.chromosomes = 10,
                                                       n.cpus = 5) 
                               
 #saveRDS(df.ASBs_genomic_location, paste(folder_tmp, "6143_ASBs_w_genomic_location.rds", sep = "/"))                  
@@ -254,7 +273,6 @@ print(df.distribution)
 
 ### BACKGROUND 
 
-
 message("Control background SNP (bgSNP) sampling")
 # Functional GWAS variants have been shown to be significantly enriched in gene proximal
 # regions. Therefore, control background SNPs (bgSNPs) were proportionally sampled (excluding ASBs) 
@@ -263,9 +281,8 @@ message("Control background SNP (bgSNP) sampling")
 # 168950 bgSNPs were sampled, yielding approximately 50 times as many background SNPs per genome location, compared to the number of ASBs within each location
 df.snps_genomic_location = add_genomic_location_bQTLs(df.bgSNPs.candidates,  
                                                       df.gene_annotation,
-                                                      v.gene_partitions = c("gene", "five_prime_UTR",  "CDS", "three_prime_UTR", "exon"),
-                                                      n.chromosomes = 10,
                                                       n.cpus = 2) 
+
 # saveRDS(df.snps_genomic_location, paste(folder_tmp, "6181870_bgSNPs_candidates_w_genomic_location.rds", sep = "/"))
 
 
@@ -275,7 +292,7 @@ v.partitions <- c("promoter_5kb", "promoter_1kb", "gene", "five_prime_UTR", "exo
 
 res <- create_background_QTLs(df.ASBs_genomic_location,
                               df.snps_genomic_location, 
-                              n.bg.multiplier = 50, 
+                              n.bg.multiplier = 40,  # 50
                               v.partitions = v.partitions, 
                               seed = 1234)
                                     
@@ -285,21 +302,14 @@ hist(df.bgSNPs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.b
      xlab = "allelic bias", cex.main = 0.7)
 
 
-df.distribution <- data.frame(ASBs = apply(df.ASBs_genomic_location[,v.partitions], 2, table)["yes",],
-                              bgSNPs = apply(df.bgSNPs[,v.partitions], 2, table)["yes",])
-df.distribution["%ASBs"] <-  round(df.distribution$ASBs / sum(df.distribution$ASBs) * 100, 1)
-df.distribution["%bgSNPs"] <-  round(df.distribution$bgSNPs / sum(df.distribution$bgSNPs) * 100, 1)
-df.distribution["multiplier"] <- round(df.distribution$bgSNPs / df.distribution$ASBs, 1)
+genomic_distribution(df.ASBs_genomic_location, df.bgSNPs, v.partitions)
 
-print(df.distribution)
 
 bQTL_scatterplot(df.bgSNPs)
 # distribution - scatter
 # saveRDS(df.bgSNPs, paste(folder_tmp, "317094_bgSNPs_w_genomic_location.rds", sep = "/"))
-write.csv(df.bgSNPs, "317094_background_SNPs_w_genomic_location.csv", quote = F, row.names = F)
-write.table(write_bed(df.bgSNPs), "317094_background_SNPs.bed", row.names = F, col.names = F, quote = F, sep = "\t")
-
-
+# write.csv(df.bgSNPs, "317094_background_SNPs_w_genomic_location.csv", quote = F, row.names = F)
+# write.table(write_bed(df.bgSNPs), "317094_background_SNPs.bed", row.names = F, col.names = F, quote = F, sep = "\t")
 
 ### GWAS ###
 
@@ -770,10 +780,34 @@ source("utils/enhancer.R")
 df.ASBs <- readRDS(paste(folder_tmp, "6143_ASBs_w_genomic_location.rds", sep = "/"))      
 df.bgSNPs <- readRDS(paste(folder_tmp, "317094_bgSNPs_w_genomic_location.rds", sep = "/"))
 
-snp_to_enhancer_distance(df.ASBs,
-                         df.bgSNPs,
-                         path.enhancer,
-                         v.sets = c("ASB", "bgSNP"),
-                         n.binWidth = 10,
-                         n.maxDist = 100000 )
+res <- snp_to_enhancer_distance(df.ASBs,
+                               df.bgSNPs,
+                               path.enhancer,
+                               n.binWidth = 10,
+                               n.maxDist = 10000)
+
+
+write.csv(res$df.ASBs_w_enhancer_annotation, "2730_non_genic_ASBs_w_genomic_location_and_enhancer.csv", quote = F, row.names = F)
+write.csv(res$df.bgSNPs_w_enhancer_annotation, "136500_non_genic_bgSNPs_w_genomic_location_and_enhancer.csv", quote = F, row.names = F)
+
+df.ASBs_enhancer <- subset(res$df.ASBs_w_enhancer_annotation, res$df.ASBs_w_enhancer_annotation$non_genic == "yes")
+table(df.ASBs_enhancer$in_enhancer_region)
+
+df.bgSNPs_enhancer <- subset(res$df.bgSNPs_w_enhancer_annotation, res$df.bgSNPs_w_enhancer_annotation$non_genic == "yes")
+table(df.bgSNPs_enhancer$in_enhancer_region)
+
+(table(df.ASBs_enhancer$in_enhancer_region)[2]/nrow(df.ASBs_enhancer))/(table(df.bgSNPs_enhancer$in_enhancer_region)[2]/nrow(df.bgSNPs_enhancer))
+
+
+
+# TODO: get both ... 
+
+message("--- Expression --- ")
+
+# TODO: make with correct gene (double) annotations 
+
+length(unique(df.ASBs$gene.ID))
+
+df.expression <- read.table(path.expression, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+
 
