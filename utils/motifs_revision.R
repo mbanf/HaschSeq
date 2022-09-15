@@ -193,26 +193,12 @@ predefined_motif_analysis <- function(df.bQTLs,
     
   }
   
-
-  write.csv(as.data.frame(m.motif_variation), "motif_base_6143_ASBs_variation.csv")
-  print(m.motif_variation)
-  
-  m.motif_variation <- round(m.motif_variation / rowSums(m.motif_variation) * 100, 2) 
-  print(m.motif_variation)
-  
-  write.csv(as.data.frame(m.motif_variation), "motif_base_6143_ASBs_variation_percentage.csv")
-  
   df.motif_asbs <- as.data.frame(m.motif_asbs)
   df.motif_asbs["percentage dir. correct"] <- round(df.motif_asbs$`dir. correct` / df.motif_asbs$`total (non-ambiguous)`* 100, 2) 
   df.motif_asbs["motif-seq"] <- v.motifs
   df.motif_asbs["motif-name"] <- names(v.motifs)
   print(df.motif_asbs)
   
-  write.csv(df.motif_asbs, "motif_directionality_6143_ASBs.csv")
-  
-  write.csv(df.bQTLs, "6143_ASBs_w_motif_annotation.csv", quote = F, row.names = F)
-  
-  #saveRDS(df.bQTLs, paste(folder_tmp, "317094_bgSNPs_w_genomic_location.rds", sep = "/"))
+  return(list(df.bQTLs=df.bQTLs, df.motif_asbs=df.motif_asbs, m.motif_variation=m.motif_variation))
 
-  
 }

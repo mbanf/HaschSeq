@@ -680,7 +680,8 @@ identify_systematic_bias <- function(df.bQTLs,
 
 filter_systematic_bias <- function(df.bQTLs,
                                    v.bg.genomic_postfrequency,
-                                   th.prob = 0.05){
+                                   th.prob = 0.05,
+                                   plot.trendline = T){
   
   ### apply filter - given probability cutoffs on the genomic postfrequency 
   
@@ -690,13 +691,13 @@ filter_systematic_bias <- function(df.bQTLs,
   library(ggplot2)
   p <- ggplot(df.bQTLs,aes(POSTfreq, pf.region)) + 
     geom_point(alpha= 0.3) + theme_bw() + 
-    geom_smooth(method="lm", linetype = "dashed", col = "red") + 
     annotate("rect", xmin=0, xmax=1,ymin=th.upper,ymax=Inf,fill="green",alpha=0.2) + 
     annotate("rect", xmin=0, xmax=1,ymin=0,ymax=th.lower,fill="blue",alpha=0.2)
     
-  
+  if(plot.trendline)
+    p <- p + geom_smooth(method="lm", linetype = "dashed", col = "red")
+    
   plot(p)
-  
   
   plot(allelic_bias_per_chromosome(df.bQTLs, n.chromosomes = 10))
 
