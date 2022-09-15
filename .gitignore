@@ -2,15 +2,13 @@
 .Rhistory
 .RData
 .Ruserdata
-
-.rds
-.csv
-.png
-.pdf
-.bed
-.fasta
-.txt
-
+*.rds
+*.csv
+*.png
+*.pdf
+*.bed
+*.fasta
+*.txt
 data/
 tmp/
 tmp_test/
@@ -18,3 +16,4 @@ output/
 output_test
 manuscript/
 figures/
+
