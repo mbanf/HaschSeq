@@ -151,8 +151,8 @@ df.bQTLs <- subset(df.bQTLs, df.bQTLs$POSTfreq < 1 & df.bQTLs$POSTfreq > 0)
 
 message(nrow(df.bQTLs), " bQTLs (significance p < ", th.p.bQTL, " )")
 hist(df.bQTLs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.bQTLs), "putative bQTLs (p < 0.001)"), xlab = "allelic bias", cex.main = 0.7)
-write.csv(df.bQTLs, "57414_bQTLs.csv", quote = F, row.names = F)
-
+# write.csv(df.bQTLs, "57414_bQTLs.csv", quote = F, row.names = F)
+# saveRDS(df.bQTLs, paste(folder_tmp, "57414_bQTLs.rds", sep = "/"))
 
 message("Estimate significant bQTLs in binding peaks.")
 
@@ -161,10 +161,8 @@ source("utils/binding_peaks_revision.R")
 df.peaks <- load_peaks(path.peaks)  # original merged peak data (without replicated-specific filtering)
 
 if(FALSE){
-  # annotate genes to peaks
-  source("utils/genomic_location_revision.R")
   
-  df.peaks.B73 <- subset(df.peaks, df.peaks$seqnames )
+  source("utils/genomic_location_revision.R")
   
   df.peaks_genomic_location <- add_genomic_location(df.peaks, 
                                                    chr = "seqnames",
@@ -186,7 +184,7 @@ hist(df.bQTLs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.bQ
 
 write.csv(df.bQTLs, "33267_bQTLs_in_peaks.csv", quote = F, row.names = F)
 #write.table(write_bed(df.bQTLs), "33267_bQTLs_in_peaks.bed", row.names = F, col.names = F, quote = F, sep = "\t")
-
+# saveRDS(df.bQTLs, paste(folder_tmp, "33267_bQTLs_in_peaks.rds", sep = "/"))
 
 
 source("utils/linkage_disequilibrium.R")
@@ -233,7 +231,8 @@ res <- readRDS(paste(folder_tmp, "res_7817_ASBs_w_bgSNPs.rds", sep = "/"))
 
 df.ASBs <- filter_systematic_bias(df.bQTLs = res$df.bQTLs,
                                   v.bg.genomic_postfrequency = res$df.bgSNPs$pf.region,
-                                  th.prob = 0.05)
+                                  th.prob = 0.05, 
+                                  plot.trendline = F)
 
 message(nrow(df.ASBs), " blacklist filtered ASBs (bQTLs in peaks after linkage disequilibrium)")
 hist(df.ASBs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.ASBs), "ASBs after linkage disequilibrium (min peak distance)"), 
@@ -714,9 +713,42 @@ message("------------ Motifs ---------")
 # and determined ASBs where the SNP changed a BRRE or G-box motif into an altered
 # (non BRRE or G-box) motif. 
 
+df.ASBs <- readRDS(paste(folder_tmp, "6143_ASBs_w_genomic_location.rds", sep = "/"))
+
 source("utils/motifs_revision.R")
-predefined_motif_analysis(df.ASBs, v.motifs, s.env_bps = 5, n.chromosomes = 10,
-                          path.genomic_sequences = "data/revision/ref_B73Mo17.fasta")
+res <- predefined_motif_analysis(df.ASBs, v.motifs, s.env_bps = 5, n.chromosomes = 10,
+                                 path.genomic_sequences = "data/revision/ref_B73Mo17.fasta")
+
+write.csv(res$df.motif_asbs, "motif_directionality_6143_ASBs.csv")
+write.csv(res$df.bQTLs, "6143_ASBs_w_motif_annotation.csv", quote = F, row.names = F)
+write.csv(as.data.frame(res$m.motif_variation), "motif_base_6143_ASBs_variation.csv")
+print(res$m.motif_variation)
+
+res$m.motif_variation <- round(res$m.motif_variation / rowSums(res$m.motif_variation) * 100, 2) 
+print(res$m.motif_variation)
+
+write.csv(as.data.frame(res$m.motif_variation), "motif_base_6143_ASBs_variation_percentage.csv")
+
+
+# compare motifs between ASBs and bQTLs (in peaks before linkage and blacklisting)
+
+df.bQTLs <- readRDS(paste(folder_tmp, "33267_bQTLs_in_peaks.rds", sep = "/"))
+
+res <- predefined_motif_analysis(df.bQTLs, v.motifs, s.env_bps = 5, n.chromosomes = 10,
+                                 path.genomic_sequences = "data/revision/ref_B73Mo17.fasta")
+
+write.csv(res$df.motif_asbs, "motif_directionality_33267_bQTLs_in_peaks.csv")
+write.csv(res$df.bQTLs, "33267_bQTLs_in_peaks_w_motif_annotation.csv", quote = F, row.names = F)
+write.csv(as.data.frame(res$m.motif_variation), "motif_base_33267_bQTLs_in_peaks_variation.csv")
+print(res$m.motif_variation)
+
+res$m.motif_variation <- round(res$m.motif_variation / rowSums(res$m.motif_variation) * 100, 2) 
+print(res$m.motif_variation)
+
+write.csv(as.data.frame(res$m.motif_variation), "motif_base_33267_bQTLs_in_peaks_variation_percentage.csv")
+
+# check comparison 
+
 
 # 
 # 
@@ -800,14 +832,14 @@ table(df.bgSNPs_enhancer$in_enhancer_region)
 
 
 
-# TODO: get both ... 
-
-message("--- Expression --- ")
-
-# TODO: make with correct gene (double) annotations 
-
-length(unique(df.ASBs$gene.ID))
-
-df.expression <- read.table(path.expression, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+# # TODO: get both ... 
+# 
+# message("--- Expression --- ")
+# 
+# # TODO: make with correct gene (double) annotations 
+# 
+# length(unique(df.ASBs$gene.ID))
+# 
+# df.expression <- read.table(path.expression, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
 
 
