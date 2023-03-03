@@ -186,6 +186,11 @@ genomic_distribution <- function(df.ASBs,
   
 }
 
+
+define_path <- function(folder, file){
+  paste(folder, file, sep = "/")
+}
+
 # 
 # bQTL_scatterplot <- function(postTotal=postTotal){
 #   

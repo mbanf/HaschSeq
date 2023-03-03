@@ -1,12 +1,12 @@
 rm(list=ls()) # clear workspace 
 
 
-folder_output = "output_test" 
-folder_tmp = "tmp_revision"
+folder_output = "output" 
+folder_tmp = "tmp"
 folder_data = "data"
 
-b.write_paper = FALSE
-
+b.write_initial = FALSE
+ 
 
 source("config.R")
 v.partitions <- c("promoter_5kb", "promoter_1kb", "gene", "five_prime_UTR", "exon", "intron", "three_prime_UTR", "post_gene_1kb", "non_genic") 
@@ -32,33 +32,23 @@ library(stringr)
 
 
 
-
 # datasets
-path.bQTLs <- "data/revision/B73.Mo17.WW.PF.uni_EG80.GT.RN.BZR1.GEM.csv" # old
-#path.bQTLs <- "data/revision/bzr1_counts/B73.Mo17.WW.PF.uni_EG80.GT.RN.BZR1.GEM.csv"
-path.peaks = "data/revision/BZR1_6.GEM_events.br.filtered.1_4_2_5_3_6.bed" # pre-filtered peaks # BZR1_6.GEM_events.bed"
-# for testing purposes of peak integration
-# v.paths.peaks.replicates = c(path.peaks, path.peaks, path.peaks, path.peaks, path.peaks, path.peaks)
-
+path.bQTLs <- "data/revision/B73.Mo17.WW.PF.uni_EG80.GT.RN.BZR1.GEM.csv" 
+path.peaks = "data/revision/BZR1_6.GEM_events.br.filtered.1_4_2_5_3_6.bed" # pre-filtered peaks 
 path.genomic_sequences = "data/revision/ref_B73Mo17.fasta"
-
-
 path.gene_annotation <- "data/revision/B73_Mo17_CSHL.gff"
-
-path.phenotypic_snps <- "data/revision/gwas/remapped_AGPv5_chr_uplifted_Wallace_etal_2014_PLoSGenet_GWAS_hits.bed"
-
+path.phenotypic_snps <- "data/revision/remapped_AGPv5_chr_uplifted_Wallace_etal_2014_PLoSGenet_GWAS_hits.bed"
 path.raw_input_reads <-"data/revision/INPUT.q255.RPGC.exScal.bin1.sm0.bw"
-#path.raw_input_reads <- "data/revision/BZR7_12.RPGCq255.b1.ct.bigwig" # old
 path.enhancer <- "data/revision/remapped_B73_enhancers_v5.bed"
 
-path.expression <- "data/revision/expression/Baldauf_2016_dataset.txt"
 
 #### START PEAK PREPROCESSING
 if(FALSE){
   
   message("Validate called peaks.")
+  v.paths.peaks.replicates = c(path.peaks, path.peaks, path.peaks, path.peaks, path.peaks, path.peaks) # replace with actual replicate paths
   
-  source("utils/binding_peaks_revision.R")
+  source("utils/binding_peaks.R")
   merge_peaks(path.peaks,
                v.paths.peaks.replicates,
                i.ref=1, # reference file 
@@ -69,18 +59,11 @@ if(FALSE){
                                     th.dist = 500, # max allowed distance between peaks in diff. files 
                                     folder = folder_tmp)
   
-  # TODO: check WARNING 
-  #1: In if (dist < th.dist) { ... :
-  #    the condition has length > 1 and only the first element will be used
-  #  2: In if (dist < th.dist) { ... :
-  
   gc()
   
 }
 #### END PEAK PREPROCESSING
 
-
-# TODO: put into separate function pre-processing !!!
 
 # The data is generated from BZR1 ChIP in all six replicates in B73xMo17, mapped to a diploid genome, i.e. the two parental genomes pasted together. 
 # Only unique mapping reads were kept, which means that only reads with sequence differences between the two inbred lines are mapped, 
@@ -136,7 +119,6 @@ message("input bQTL after min reads per allele filter: ", nrow(df.snps))
 message(nrow(df.snps), " SNPs from BZR1 ChIP in all six replicates in B73xMo17 (10 chromosomes only)")
 hist(df.snps$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.snps), " SNPs from BZR1 ChIP in all six replicates in B73xMo17 (10 chromosomes only)"), xlab = "allelic bias", cex.main = 0.7)
 
-
 prob.bias <- median(df.snps$refCount / df.snps$totalCount)
 message("bias probability (median): ", prob.bias)
 th.p.bQTL = 0.001
@@ -151,18 +133,20 @@ df.bQTLs <- subset(df.bQTLs, df.bQTLs$POSTfreq < 1 & df.bQTLs$POSTfreq > 0)
 
 message(nrow(df.bQTLs), " bQTLs (significance p < ", th.p.bQTL, " )")
 hist(df.bQTLs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.bQTLs), "putative bQTLs (p < 0.001)"), xlab = "allelic bias", cex.main = 0.7)
-# write.csv(df.bQTLs, "57414_bQTLs.csv", quote = F, row.names = F)
-# saveRDS(df.bQTLs, paste(folder_tmp, "57414_bQTLs.rds", sep = "/"))
+write.csv(df.bQTLs, define_path(folder_output, "57414_bQTLs.csv"), quote = F, row.names = F)
+
+if(b.write_initial)
+  saveRDS(df.bQTLs, paste(folder_tmp, "57414_bQTLs.rds", sep = "/"))
 
 message("Estimate significant bQTLs in binding peaks.")
 
-source("utils/binding_peaks_revision.R")
+source("utils/binding_peaks.R")
 
 df.peaks <- load_peaks(path.peaks)  # original merged peak data (without replicated-specific filtering)
 
 if(FALSE){
   
-  source("utils/genomic_location_revision.R")
+  source("utils/genomic_location.R")
   
   df.peaks_genomic_location <- add_genomic_location(df.peaks, 
                                                    chr = "seqnames",
@@ -170,7 +154,7 @@ if(FALSE){
                                                    df.gene_annotation,
                                                    n.cpus = 5)
 
-  write.csv(df.peaks_genomic_location, "52765_peaks_w_genomic_location_w_gene_association.csv", quote = F, row.names = F)
+  write.csv(df.peaks_genomic_location, define_path(folder_output, "52765_peaks_w_genomic_location_w_gene_association.csv"), quote = F, row.names = F)
 
 }
 
@@ -182,9 +166,11 @@ message(nrow(df.bQTLs), " SNPs located within high-confidence BZR1 binding peaks
 hist(df.bQTLs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.bQTLs), "bQTL located within high-confidence BZR1 binding peaks"), 
      xlab = "allelic bias", cex.main = 0.7)
 
-write.csv(df.bQTLs, "33267_bQTLs_in_peaks.csv", quote = F, row.names = F)
+write.csv(df.bQTLs, define_path(folder_output, "33267_bQTLs_in_peaks.csv"), quote = F, row.names = F)
 #write.table(write_bed(df.bQTLs), "33267_bQTLs_in_peaks.bed", row.names = F, col.names = F, quote = F, sep = "\t")
-# saveRDS(df.bQTLs, paste(folder_tmp, "33267_bQTLs_in_peaks.rds", sep = "/"))
+
+if(b.write_initial)
+  saveRDS(df.bQTLs, paste(folder_tmp, "33267_bQTLs_in_peaks.rds", sep = "/"))
 
 
 source("utils/linkage_disequilibrium.R")
@@ -199,15 +185,15 @@ bQTL_scatterplot(df.ASBs)
 hist(df.ASBs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.ASBs), "ASBs after linkage disequilibrium (min peak distance)"), 
      xlab = "allelic bias", cex.main = 0.7)
 
-write.csv(df.ASBs, "7817_ASBs_75bp_min_peak_distance.csv", quote = F, row.names = F)
-write.table(write_bed(df.ASBs), "7817_ASBs_75bp_min_peak_distance.bed", row.names = F, col.names = F, quote = F, sep = "\t")
+write.csv(df.ASBs, define_path(folder_output, "7817_ASBs_75bp_min_peak_distance.csv"), quote = F, row.names = F)
+write.table(write_bed(df.ASBs), define_path(folder_output, "7817_ASBs_75bp_min_peak_distance.bed"), row.names = F, col.names = F, quote = F, sep = "\t")
 
 asb_environment <- extract_sequences(df.ASBs,
                                      genome_sequences = readDNAStringSet(path.genomic_sequences),
                                      s.env_bps = 100,
                                      n.chromosomes = 10)
 
-writeXStringSet(asb_environment, "200_bp_environment_sequences_from_7817_ASBs_75bp_min_peak_distance.fasta")
+writeXStringSet(asb_environment, define_path(folder_output, "200_bp_environment_sequences_from_7817_ASBs_75bp_min_peak_distance.fasta"))
 
 
 
@@ -226,7 +212,9 @@ res <- identify_systematic_bias(df.ASBs,
                                 n.bg.multiplier = 5,
                                 bQTL_only=F)
 
-#saveRDS(res, paste(folder_tmp, "res_7817_ASBs_w_bgSNPs.rds", sep = "/"))
+if(b.write_initial)
+  saveRDS(res, paste(folder_tmp, "res_7817_ASBs_w_bgSNPs.rds", sep = "/"))
+
 res <- readRDS(paste(folder_tmp, "res_7817_ASBs_w_bgSNPs.rds", sep = "/"))
 
 df.ASBs <- filter_systematic_bias(df.bQTLs = res$df.bQTLs,
@@ -238,15 +226,15 @@ message(nrow(df.ASBs), " blacklist filtered ASBs (bQTLs in peaks after linkage d
 hist(df.ASBs$POSTfreq, breaks = 100, main = paste("Allelic bias of", nrow(df.ASBs), "ASBs after linkage disequilibrium (min peak distance)"), 
      xlab = "allelic bias", cex.main = 0.7)
 
-write.csv(df.ASBs, "6143_ASBs_75bp_min_peak_distance_blacklist.csv", quote = F, row.names = F)
-write.table(write_bed(df.ASBs), "6143_ASBs_75bp_min_peak_distance_blacklist.bed", row.names = F, col.names = F, quote = F, sep = "\t")
+write.csv(df.ASBs, define_path(folder_output, "6143_ASBs_75bp_min_peak_distance_blacklist.csv"), quote = F, row.names = F)
+write.table(write_bed(df.ASBs), define_path(folder_output, "6143_ASBs_75bp_min_peak_distance_blacklist.bed"), row.names = F, col.names = F, quote = F, sep = "\t")
 
 asb_environment <- extract_sequences(df.ASBs,
                                      genome_sequences = readDNAStringSet(path.genomic_sequences),
                                      s.env_bps = 100,
                                      n.chromosomes = 10)
 
-writeXStringSet(asb_environment, "200_bp_environment_sequences_from_6143_ASBs_75bp_min_peak_distance.fasta")
+writeXStringSet(asb_environment, define_path(folder_output, "200_bp_environment_sequences_from_6143_ASBs_75bp_min_peak_distance.fasta"))
 
 
 
@@ -254,14 +242,16 @@ message("perform gene partitioning")
 df.gene_annotation <- load_gene_annotation(path.gene_annotation)
 
 
-source("utils/genomic_location_revision.R")
+source("utils/genomic_location.R")
 df.ASBs_genomic_location = add_genomic_location_bQTLs(df.ASBs,  
                                                       df.gene_annotation,
                                                       n.cpus = 5) 
-                              
-#saveRDS(df.ASBs_genomic_location, paste(folder_tmp, "6143_ASBs_w_genomic_location.rds", sep = "/"))                  
+       
+if(b.write_initial)                       
+  saveRDS(df.ASBs_genomic_location, paste(folder_tmp, "6143_ASBs_w_genomic_location.rds", sep = "/"))                  
+
 message(nrow(df.ASBs_genomic_location), " high confidence allele-specific BZR1 binding sites located near ", length(unique(df.ASBs_genomic_location$gene.ID)), " flanking genes")
-write.csv(df.ASBs_genomic_location, "6143_ASBs_w_genomic_location.csv", quote = F, row.names = F)
+write.csv(df.ASBs_genomic_location, define_path(folder_output, "6143_ASBs_w_genomic_location.csv"), quote = F, row.names = F)
 
 df.distribution <- data.frame(ASBs = apply(df.ASBs_genomic_location[,v.partitions], 2, table)["yes",])
 df.distribution["%ASBs"] <-  round(df.distribution$ASBs / sum(df.distribution$ASBs) * 100, 1)
@@ -282,7 +272,8 @@ df.snps_genomic_location = add_genomic_location_bQTLs(df.bgSNPs.candidates,
                                                       df.gene_annotation,
                                                       n.cpus = 2) 
 
-# saveRDS(df.snps_genomic_location, paste(folder_tmp, "6181870_bgSNPs_candidates_w_genomic_location.rds", sep = "/"))
+if(b.write_initial)
+  saveRDS(df.snps_genomic_location, paste(folder_tmp, "6181870_bgSNPs_candidates_w_genomic_location.rds", sep = "/"))
 
 
 source("utils/qtl_background_sampling.R")
@@ -305,8 +296,9 @@ genomic_distribution(df.ASBs_genomic_location, df.bgSNPs, v.partitions)
 
 
 bQTL_scatterplot(df.bgSNPs)
-# distribution - scatter
-# saveRDS(df.bgSNPs, paste(folder_tmp, "317094_bgSNPs_w_genomic_location.rds", sep = "/"))
+
+if(b.write_initial)
+  saveRDS(df.bgSNPs, paste(folder_tmp, "317094_bgSNPs_w_genomic_location.rds", sep = "/"))
 # write.csv(df.bgSNPs, "317094_background_SNPs_w_genomic_location.csv", quote = F, row.names = F)
 # write.table(write_bed(df.bgSNPs), "317094_background_SNPs.bed", row.names = F, col.names = F, quote = F, sep = "\t")
 
@@ -329,12 +321,12 @@ v.traits  <- unique(df.phenotypic_snps$trait)
 print(table(df.phenotypic_snps$trait))
 
 
-source("utils/gwas_enrichment_revision.R")
+source("utils/gwas_enrichment.R")
 
 res <- perform_gwas(df.ASBs, df.bgSNPs, B73.only = F, th.pval = 0.05)
-write.csv(res$d.gsea, "2000bp_dist_phenotypic_gwas_6143_ASBs_317094_bgSNPs.csv",  row.names = FALSE, quote = FALSE)
+write.csv(res$d.gsea, define_path(folder_output, "2000bp_dist_phenotypic_gwas_6143_ASBs_317094_bgSNPs.csv"),  row.names = FALSE, quote = FALSE)
 
-write.csv(res$res.ASBs$df.bQTLs_w_phenotypes, "2000bp_dist_phenotypic_gwas_6143_ASBs_w_traits.csv",  row.names = FALSE, quote = FALSE)
+write.csv(res$res.ASBs$df.bQTLs_w_phenotypes, define_path(folder_output, "2000bp_dist_phenotypic_gwas_6143_ASBs_w_traits.csv"),  row.names = FALSE, quote = FALSE)
 
 df.bQTLs_w_phenotypes <- res$res.ASBs$df.bQTLs_w_phenotypes
 df.bgSNPs_w_phenotypes <- res$res.bgSNPs$df.bQTLs_w_phenotypes
@@ -382,10 +374,10 @@ for(trait in v.traits){
   
 }
   
-write.csv(d.gsea, "2000bp_dist_phenotypic_gwas_6143_ASBs_317094_bgSNPs_B73_partition_enrichment.csv",  row.names = FALSE, quote = FALSE)
+write.csv(d.gsea, define_path(folder_output, "2000bp_dist_phenotypic_gwas_6143_ASBs_317094_bgSNPs_B73_partition_enrichment.csv"),  row.names = FALSE, quote = FALSE)
 
 d.gsea <- perform_gwas(df.ASBs, df.bgSNPs, B73.only = T)
-write.csv(d.gsea, "2000bp_dist_phenotypic_gwas_6143_ASBs_317094_bgSNPs_B73_postfreq_only.csv",  row.names = FALSE, quote = FALSE)
+write.csv(d.gsea, define_path(folder_output, "2000bp_dist_phenotypic_gwas_6143_ASBs_317094_bgSNPs_B73_postfreq_only.csv"),  row.names = FALSE, quote = FALSE)
 
 
 
@@ -415,7 +407,7 @@ message("------------ Methylation ---------")
 # and oppositely for Mo17 by a post frequency <= 0.15 and >= 0.85), respectively.
 
 
-source("utils/methylation_revision.R")
+source("utils/methylation.R")
 v.parents = c("B73", "Mo17", "B73", "Mo17", "B73", "Mo17")
 v.variants = c("CG", "CG", "CHH", "CHH", "CHG", "CHG")
 
@@ -467,8 +459,8 @@ res <- load_methylation(df.ASBs,
 df.ASBs <- res$df.ASBs
 df.bgSNPs <- res$df.bgSNPs
 
-write.csv(df.ASBs, "6143_ASBs_w_genomic_location_and_methylation.csv", quote = F, row.names = F)
-write.csv(df.bgSNPs, "317094_bgSNPs_w_genomic_location_and_methylation.csv", quote = F, row.names = F)
+write.csv(df.ASBs, define_path(folder_output, "6143_ASBs_w_genomic_location_and_methylation.csv"), quote = F, row.names = F)
+write.csv(df.bgSNPs, define_path(folder_output, "317094_bgSNPs_w_genomic_location_and_methylation.csv"), quote = F, row.names = F)
 
 dev.off()
 k = 2
@@ -574,97 +566,6 @@ plot_methylation_occupancy_distance_to_asb(v.variant_sets = c("CG", "CHG", "CHH"
                                            th.high_affinity = 0.85,
                                            folder = folder_tmp_methylation)
 
-# 
-# methylation_occupancy(l.bQTL_gene_partitioning, 
-#                       th.distance_to_ASB = 2000,
-#                       n.chromosomes = 10,
-#                       n.cpus = 4,
-#                       n.binWidth = 20,
-#                       b.val = TRUE,
-#                       v.species = c("Mo17", "B73"),
-#                       v.groups = c("all", "genic", "non_genic"),
-#                       v.species = c("Mo17", "Mo17" , "B73", "B73"),
-#                       v.stringency <- c("< 0.5 | > 0.5", "< 0.15 | > 0.85", "< 0.5 | > 0.5", "< 0.15 | > 0.85"),
-#                       v.filenames = c(paste(folder_data,"methylation/B73_CHG.bw", sep = "/"),
-#                                       paste(folder_data,"methylation/B73_CHH.bw", sep = "/"),
-#                                       paste(folder_data,"methylation/B73_CpG.bw", sep = "/"),
-#                                       paste(folder_data,"methylation/MO17_CHG.bw", sep = "/"),
-#                                       paste(folder_data,"methylation/MO17_CHH.bw", sep = "/"),
-#                                       paste(folder_data,"methylation/MO17_CpG.bw", sep = "/")),
-#                       v.datasets = c("B73_CHG", "B73_CHH", "B73_CpG", "MO17_CHG", "MO17_CHH", "MO17_CpG"),
-#                       v.formats = c("bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig"),
-#                       folder_tmp = folder_tmp,
-#                       folder_output = folder_output,
-#                       do.plot = F)
-# 
-# 
-# # rename methylation, open chromatin?
-# l.SNPs_w_chromatin <- RDS(paste(folder_tmp, "l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds", sep = "/"))
-# 
-# # Fig. 4 l) Correlation of CG methylation with allele-specific BZR1 binding. Average
-# # CG methylation of the B73 - Mo17 allele of the 40bp surrounding each ASB are plotted against
-# # the allelic bias (expressed in percentage of B73 read counts). Differential CG methylation is
-# # indicated by red dots.
-# differential_methylation_vs_allelic_bias(l.SNPs=l.bQTL_gene_partitioning,
-#                                          th.bp_offset = 20,
-#                                          th.distance_to_ASB = 2000,
-#                                          n.chromosomes = 10,
-#                                          n.cpus = 1,
-#                                          b.val = TRUE,
-#                                          v.species = c("Mo17", "B73"),
-#                                          degrees = 15,
-#                                          th.distance_to_ASB = 5000,
-#                                          th.padding = 50,
-#                                          width = 6,
-#                                          height = 4,
-#                                          group = "genic_and_nongenic",
-#                                          v.filenames = c("data/dnase/GSE94291_DNase_ist.bedGraph", 
-#                                                          "data/methylation/B73_CpG.bw", 
-#                                                          "data/methylation/MO17_CpG.bw",
-#                                                          "data/methylation/B73_CHG.bw",
-#                                                          "data/methylation/MO17_CHG.bw",
-#                                                          "data/methylation/B73_CHH.bw",
-#                                                          "data/methylation/MO17_CHH.bw"),
-#                                          v.datasets = c("DNase", "B73_CpG",  "MO17_CpG", "B73_CHG", "MO17_CHG", "B73_CHH", "MO17_CHH"),
-#                                          v.formats = c("bedGraph", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig"),
-#                                          v.has_ranges = c("yes",  "no", "no",  "no", "no",  "no", "no")
-# )
-# 
-# 
-# # TODO: get absolute and differential figure ... 
-# 
-# 
-# l.SNPs_w_chromatin <- readRDS(paste(folder_tmp, "l.SNPs_w_chromatin_ASBs_and_bgSNPs.rds", sep = "/"))
-# 
-# 
-# df.ASBs
-# 
-# 
-# 
-# l.SNPs=l.bQTL_gene_partitioning
-# th.bp_offset = 20
-# th.distance_to_ASB = 2000
-# n.chromosomes = 10
-# n.cpus = 1
-# b.val = TRUE
-# v.species = c("Mo17", "B73")
-# degrees = 15
-# th.distance_to_ASB = 5000
-# th.padding = 50
-# width = 6
-# height = 4
-# group = "genic_and_nongenic"
-# v.filenames = c("data/dnase/GSE94291_DNase_ist.bedGraph", 
-#                 "data/methylation/B73_CpG.bw", 
-#                 "data/methylation/MO17_CpG.bw",
-#                 "data/methylation/B73_CHG.bw",
-#                 "data/methylation/MO17_CHG.bw",
-#                 "data/methylation/B73_CHH.bw",
-#                 "data/methylation/MO17_CHH.bw")
-# v.datasets = c("DNase", "B73_CpG",  "MO17_CpG", "B73_CHG", "MO17_CHG", "B73_CHH", "MO17_CHH")
-# v.formats = c("bedGraph", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig", "bigWig")
-# v.has_ranges = c("yes",  "no", "no",  "no", "no",  "no", "no")
-# 
 
 
 # Fig. 2. Variation in DNA sequence and methylation underlie differential BZR1 binding. a)
@@ -715,19 +616,19 @@ message("------------ Motifs ---------")
 
 df.ASBs <- readRDS(paste(folder_tmp, "6143_ASBs_w_genomic_location.rds", sep = "/"))
 
-source("utils/motifs_revision.R")
+source("utils/motifs.R")
 res <- predefined_motif_analysis(df.ASBs, v.motifs, s.env_bps = 5, n.chromosomes = 10,
                                  path.genomic_sequences = "data/revision/ref_B73Mo17.fasta")
 
-write.csv(res$df.motif_asbs, "motif_directionality_6143_ASBs.csv")
-write.csv(res$df.bQTLs, "6143_ASBs_w_motif_annotation.csv", quote = F, row.names = F)
-write.csv(as.data.frame(res$m.motif_variation), "motif_base_6143_ASBs_variation.csv")
+write.csv(res$df.motif_asbs, define_path(folder_output, "motif_directionality_6143_ASBs.csv"))
+write.csv(res$df.bQTLs, define_path(folder_output, "6143_ASBs_w_motif_annotation.csv"), quote = F, row.names = F)
+write.csv(as.data.frame(res$m.motif_variation), define_path(folder_output, "motif_base_6143_ASBs_variation.csv"))
 print(res$m.motif_variation)
 
 res$m.motif_variation <- round(res$m.motif_variation / rowSums(res$m.motif_variation) * 100, 2) 
 print(res$m.motif_variation)
 
-write.csv(as.data.frame(res$m.motif_variation), "motif_base_6143_ASBs_variation_percentage.csv")
+write.csv(as.data.frame(res$m.motif_variation), define_path(folder_output, "motif_base_6143_ASBs_variation_percentage.csv"))
 
 
 # compare motifs between ASBs and bQTLs (in peaks before linkage and blacklisting)
@@ -737,72 +638,15 @@ df.bQTLs <- readRDS(paste(folder_tmp, "33267_bQTLs_in_peaks.rds", sep = "/"))
 res <- predefined_motif_analysis(df.bQTLs, v.motifs, s.env_bps = 5, n.chromosomes = 10,
                                  path.genomic_sequences = "data/revision/ref_B73Mo17.fasta")
 
-write.csv(res$df.motif_asbs, "motif_directionality_33267_bQTLs_in_peaks.csv")
-write.csv(res$df.bQTLs, "33267_bQTLs_in_peaks_w_motif_annotation.csv", quote = F, row.names = F)
-write.csv(as.data.frame(res$m.motif_variation), "motif_base_33267_bQTLs_in_peaks_variation.csv")
+write.csv(res$df.motif_asbs, define_path(folder_output, "motif_directionality_33267_bQTLs_in_peaks.csv"))
+write.csv(res$df.bQTLs, define_path(folder_output, "33267_bQTLs_in_peaks_w_motif_annotation.csv"), quote = F, row.names = F)
+write.csv(as.data.frame(res$m.motif_variation), define_path(folder_output, "motif_base_33267_bQTLs_in_peaks_variation.csv"))
 print(res$m.motif_variation)
 
 res$m.motif_variation <- round(res$m.motif_variation / rowSums(res$m.motif_variation) * 100, 2) 
 print(res$m.motif_variation)
 
-write.csv(as.data.frame(res$m.motif_variation), "motif_base_33267_bQTLs_in_peaks_variation_percentage.csv")
-
-# check comparison 
-
-
-# 
-# 
-# if(!b.load_motif_analysis){
-#   source("motifs/predefined_motif_analysis.R")
-#   
-#   
-#   
-#   predefined_motif_analysis(l.bQTL_gene_partitioning, df.peaks, motifs, v.motif_offset)
-#   
-#   l.motif_analysis <- readRDS(paste(folder_tmp, "l.motif_analysis.rds", sep = "/"))
-#   l.nucleotideInPeaks <- readRDS(paste(folder_tmp, "l.nucleotideInPeaks.rds", sep = "/"))
-#   
-#   
-#   source("motifs/predefined_motifs_in_peaks.R")
-#   predefined_motifs_in_peaks(l.motif_analysis, l.nucleotideInPeaks)
-#   
-#   l.motif_analysis.postprocessed = readRDS(paste(folder_tmp, "l.motif_analysis.postprocessed.rds", sep = "/"))
-#   
-#   
-#   source("motifs/directionality_and_snp_distribution.R")
-#   directionality_and_snp_distribution(l.motif_analysis.postprocessed)
-#   
-#   df.motif_nucleotidePositionPartitions <- readRDS(paste(folder_tmp, "df.motif_nucleotidePositionPartitions.rds", sep = "/"))
-#   
-#   
-#   source("motifs/motif_snp_position_significance.R")
-#   motif_snp_position_significance(l.bQTL_gene_partitioning, motifs, v.motif_offset, df.peaks, genome, l.genome.mutant, n.chromosomes)
-#   
-#   
-#   source("motifs/evaluating_BZR1_core_motif.R")
-#   evaluating_BZR1_core_motif(df.ASBs, core_motif = "CGTG", s.motif_offset = 5, n.chromosomes = 10)
-#   
-# }else{
-#   l.motif_analysis <- readRDS(paste(folder_tmp, "l.motif_analysis.rds", sep = "/"))
-#   l.nucleotideInPeaks <- readRDS(paste(folder_tmp, "l.nucleotideInPeaks.rds", sep = "/"))
-#   l.motif_analysis.postprocessed = readRDS(paste(folder_tmp, "l.motif_analysis.postprocessed.rds", sep = "/"))
-#   df.motif_nucleotidePositionPartitions <- readRDS(paste(folder_tmp, "df.motif_nucleotidePositionPartitions.rds", sep = "/"))
-#   df.motifPositionAnalysis <- readRDS(paste(folder_tmp, "df.motifPositionAnalysis.rds", sep = "/"))
-#   df.ASBs.core_motifs <- readRDS(paste(folder_tmp, "df.ASBs.core_motifs.rds", sep = "/"))
-# }
-# 
-# if(b.write_paper){
-#   write.table(l.motif_analysis[[1]], paste(folder_output, "/motifs/S0_1.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-#   
-#   print(table(l.motif_analysis.postprocessed[[1]]$direction))
-#   write.table(l.motif_analysis.postprocessed[[1]], paste(folder_output, "/motifs/S0_2.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-#   write.table(df.motif_directionality, paste(folder_output, "/motifs/S0_3.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-#   write.table(df.motif_nucleotidePositionPartitions, paste(folder_output, "/motifs/S0_4.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-#   write.table(df.motifPositionAnalysis, paste(folder_output, "/motifs/S0_5.txt", sep = ""),  row.names = FALSE, quote = FALSE, sep ="\t")
-#   write.table(df.ASBs.core_motifs, paste(folder_output, "/SX3.txt", sep = ""), quote = FALSE, row.names = FALSE, sep ="\t")
-#   
-# }
-# 
+write.csv(as.data.frame(res$m.motif_variation), define_path(folder_output, "motif_base_33267_bQTLs_in_peaks_variation_percentage.csv"))
 
 
 message("------------ Enhancer ---------")
@@ -819,8 +663,8 @@ res <- snp_to_enhancer_distance(df.ASBs,
                                n.maxDist = 10000)
 
 
-write.csv(res$df.ASBs_w_enhancer_annotation, "2730_non_genic_ASBs_w_genomic_location_and_enhancer.csv", quote = F, row.names = F)
-write.csv(res$df.bgSNPs_w_enhancer_annotation, "136500_non_genic_bgSNPs_w_genomic_location_and_enhancer.csv", quote = F, row.names = F)
+write.csv(res$df.ASBs_w_enhancer_annotation, define_path(folder_output, "2730_non_genic_ASBs_w_genomic_location_and_enhancer.csv"), quote = F, row.names = F)
+write.csv(res$df.bgSNPs_w_enhancer_annotation, define_path(folder_output, "136500_non_genic_bgSNPs_w_genomic_location_and_enhancer.csv"), quote = F, row.names = F)
 
 df.ASBs_enhancer <- subset(res$df.ASBs_w_enhancer_annotation, res$df.ASBs_w_enhancer_annotation$non_genic == "yes")
 table(df.ASBs_enhancer$in_enhancer_region)
@@ -831,15 +675,5 @@ table(df.bgSNPs_enhancer$in_enhancer_region)
 (table(df.ASBs_enhancer$in_enhancer_region)[2]/nrow(df.ASBs_enhancer))/(table(df.bgSNPs_enhancer$in_enhancer_region)[2]/nrow(df.bgSNPs_enhancer))
 
 
-
-# # TODO: get both ... 
-# 
-# message("--- Expression --- ")
-# 
-# # TODO: make with correct gene (double) annotations 
-# 
-# length(unique(df.ASBs$gene.ID))
-# 
-# df.expression <- read.table(path.expression, header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
 
 
