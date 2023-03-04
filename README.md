@@ -20,3 +20,5 @@ disease-related traits. Our study provides a robust method for analyzing genome-
 variations of transcription factor occupancy and identified genetic and epigenetic
 variations of the BR response transcription network in maize.
 
+
+Link to datasets, tmp and output files: https://1drv.ms/u/s!Avm82Xhe9EZj62fdhHXuxu3W-F2J?e=JUQImJ
